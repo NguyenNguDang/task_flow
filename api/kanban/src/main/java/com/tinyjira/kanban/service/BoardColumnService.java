@@ -1,11 +1,9 @@
 package com.tinyjira.kanban.service;
 
-import com.tinyjira.kanban.DTO.response.BoardDetailResponse;
 import com.tinyjira.kanban.DTO.response.ColumnDetailResponse;
-import com.tinyjira.kanban.model.BoardColumn;
 import com.tinyjira.kanban.utils.ColumnRequest;
+import jakarta.validation.Valid;
 
-import javax.validation.Valid;
 import java.util.List;
 
 public interface BoardColumnService {

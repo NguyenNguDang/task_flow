@@ -3,6 +3,8 @@ package com.tinyjira.kanban.controller;
 import com.tinyjira.kanban.DTO.SprintDTO;
 import com.tinyjira.kanban.DTO.request.SprintRequest;
 import com.tinyjira.kanban.service.SprintService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -10,8 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
-import javax.validation.constraints.Min;
 import java.util.List;
 
 @Validated
@@ -57,7 +57,7 @@ public class SprintController {
             return ResponseEntity.ok(sprints);
             
         } catch (Exception e) {
-            log.error("LỖI CHẾT NGƯỜI Ở SPRINT CONTROLLER: ", e);
+            log.error("getAllSprintsWithBoarId: ", e);
             return ResponseEntity.internalServerError().body(e.getMessage());
         }
     }
@@ -67,6 +67,20 @@ public class SprintController {
                                         @PathVariable Long id) {
         sprintService.updateSprint(id, sprint);
         log.info("Update Sprint with id {}", id);
+        return ResponseEntity.noContent().build();
+    }
+    
+    @PatchMapping("/{id}/complete")
+    public ResponseEntity<?> completeSprint(@PathVariable @Min(1) Long id) {
+        sprintService.completeSprint(id);
+        log.info("Completed Sprint with id {}", id);
+        return ResponseEntity.noContent().build();
+    }
+    
+    @PatchMapping("/{id}/start")
+    public ResponseEntity<?> startSprint(@PathVariable @Min(1) Long id) {
+        sprintService.startSprint(id);
+        log.info("Started Sprint with id {}", id);
         return ResponseEntity.noContent().build();
     }
     

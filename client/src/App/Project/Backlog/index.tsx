@@ -78,19 +78,8 @@ export default function Backlog() {
             return;
         }
 
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setDate(startDate.getDate() + 14);
-
-        const payload = {
-            name: currentSprint.name,
-            status: "ACTIVE",
-            startDate: startDate,
-            endDate: endDate
-        };
-
         try {
-            await axios.put(`${BACKEND_URL}/sprint/${sprintId}`, payload)
+            await axios.patch(`${BACKEND_URL}/sprint/${sprintId}/start`)
 
             //Optimistic Update
             const updatedSprints = sprints.map(s => {
@@ -108,9 +97,30 @@ export default function Backlog() {
         }
     };
 
-    const handleCompleteSprint = (sprintId: number) => {
+    const handleCompleteSprint = async (sprintId: number) => {
         console.log("Complete sprint:", sprintId);
-        // Gọi API /api/v1/sprint/{id}/complete ...
+        // Call API complete sprint
+        try {
+            const res = await  axios.patch(`${BACKEND_URL}/sprint/${sprintId}/complete`);
+            if (res.status === 204) {
+                toast.success("Hoàn thành Sprint thành công!");
+
+                // TODO: Cập nhật state của React ở đây để UI thay đổi ngay lập tức
+                setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
+                setAllTasks(prevTasks => prevTasks.map(task => {
+                    // Nếu task thuộc sprint vừa xóa VÀ chưa xong
+                    if (task.sprintId === sprintId && task.status !== 'done') {
+                        // Gán sprintId = null để nó hiển thị ở BacklogSection
+                        return { ...task, sprintId: null };
+                    }
+                    // Nếu task đã DONE, ta có thể giữ nguyên hoặc ẩn đi tùy logic (thường là giữ nguyên id sprint cũ để báo cáo, nhưng BacklogSection sẽ không render nó vì nó có sprintId)
+                    return task;
+                }));
+            }
+        }catch (error) {
+            console.error("Failed to complete sprint:", error);
+            toast.error("Failed to complete sprint. Please try again.");
+        }
     };
 
     if (loading) return <div>Loading board...</div>;

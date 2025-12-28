@@ -16,7 +16,7 @@ public interface SprintRepository extends JpaRepository<Sprint, Long> {
     
     long countByBoardId(Long boardId);
     
-    List<Sprint> findByBoardId(Long boardId);
+    List<Sprint> findByBoardIdAndStatusNot(Long boardId, SprintStatus status);
     
     @Query("SELECT s FROM Sprint s WHERE s.board.id = :boardId AND s.status = :status")
     Optional<Sprint> findActiveSprintByBoardId(

@@ -1,26 +1,103 @@
-# Compiled class file
+# ========================
+# 1. HỆ THỐNG & IDE (Chung)
+# ========================
+# OS junk files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Eclipse / STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+# ========================
+# 2. BACKEND (Java / Spring Boot)
+# ========================
+target/
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
-*.nar
 *.ear
 *.zip
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
-.vscode
-.git
+# Logs
+logs/
+*.log
+
+# Maven Wrapper:
+# Thường chúng ta NÊN commit thư mục .mvn để người khác chạy được ./mvnw
+# Nếu bạn thực sự không muốn commit file .jar của wrapper thì mới bỏ comment dòng dưới:
+# !.mvn/wrapper/maven-wrapper.jar
+
+# ========================
+# 3. FRONTEND (Node.js / React)
+# ========================
+# Dependencies (Rất quan trọng - Không bao giờ commit cái này)
+node_modules/
+bower_components/
+
+# Build outputs
+dist/
+build/
+dist-ssr/
+.next/
+.nuxt/
+.vuepress/dist
+
+# Environment variables (Bảo mật - Không commit)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Caches
+.npm
+.eslintcache
+.stylelintcache
+.cache
+.parcel-cache
+*.tsbuildinfo
+
+# Coverage
+coverage/
+.nyc_output/
+
+# ========================
+# 4. KHÁC
+# ========================
+# Temp files
+*.tmp
+*.bak
+*.swp

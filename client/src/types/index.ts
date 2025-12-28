@@ -22,19 +22,20 @@ export type Assignee = {
 export interface Task {
     id: number;
     title: string;
+    description: string;
+    position?: number;
     status: 'todo' | 'doing' | 'done';
     sprintId: number | null;
-    assignee?: string;
+    assigneeName: string | null;
+    assigneeAvatar: string | null;
     storyPoint?: number;
     priority: string;
 }
 
 export interface TaskCard {
     id: string;
-    content: {
-        title: string;
-        description?: string;
-    };
+    title: string;
+    description?: string;
     tag: string;
     assignees: { name: string; avatar?: string }[];
     position?: number;
@@ -82,10 +83,6 @@ export interface CreateTaskRequest {
     priority: 'high' | 'medium' | 'low';
     columnId: number;
     projectId: number;
-}
-
-export interface Task {
-    id: number;
-    title: string;
-    createdAt: string;
+    boardId: number;
+    sprintId: number;
 }

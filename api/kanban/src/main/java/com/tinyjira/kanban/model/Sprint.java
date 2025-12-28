@@ -24,6 +24,12 @@ public class Sprint extends AbstractEntity<Long>{
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime endDate;
     
+    @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
+    private LocalDateTime completedAt;
+    
+    @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
+    private LocalDateTime startedAt;
+    
     @Enumerated(EnumType.STRING)
     private SprintStatus status;
     
@@ -31,6 +37,28 @@ public class Sprint extends AbstractEntity<Long>{
     @JoinColumn(name = "board_id", referencedColumnName = "id")
     @JsonIgnore
     private Board board;
+    
+    //Complete sprint
+    public void complete(){
+        if(this.status == SprintStatus.COMPLETED){
+            throw new IllegalStateException("Sprint has already completed");
+        }
+        if(this.status != SprintStatus.ACTIVE){
+            throw new IllegalStateException("Sprint is not active");
+        }
+        
+        this.status = SprintStatus.COMPLETED;
+        this.completedAt = LocalDateTime.now();
+    }
+    
+    //Start sprint
+    public void start(){
+        if(this.status != SprintStatus.PLANNING){
+            throw new IllegalStateException("Sprint is not planning");
+        }
+        this.status = SprintStatus.ACTIVE;
+        this.startedAt = LocalDateTime.now();
+    }
     
     //date time
     @PrePersist

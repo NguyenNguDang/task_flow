@@ -29,4 +29,7 @@ public interface TaskRepository extends CrudRepository<Task, Long> {
             "LEFT JOIN FETCH t.users " +
             "WHERE t.sprint.id = :sprintId")
     List<Task> findBySprintId(@Param("sprintId") Long sprintId);
+    
+    @Query("SELECT MAX(t.position) FROM Task t WHERE t.boardColumn.id = :columnId")
+    Double findMaxPositionByBoardColumnId(Long columnId);
 }

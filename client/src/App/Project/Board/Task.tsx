@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Draggable } from "@hello-pangea/dnd";
-import { Tags, TaskCard } from "types"; // Import interface mới
+import { Tags, TaskCard } from "types";
 
 const getStyle = (style: any, snapshot: any) => {
     if (!snapshot.isDropAnimating) {
@@ -16,11 +16,11 @@ export default function Task({
                                  task,
                                  index,
                              }: Readonly<{task: TaskCard; index: number; }>) {
-    // Ép kiểu keyof typeof Tags để tránh lỗi TS nếu tag lạ
+    if (!task) return null;
     const tagColor = Tags?.[task.tag?.toUpperCase() as keyof typeof Tags] ?? "bg-blue-300";
 
     return (
-        <Draggable draggableId={task.id} index={index}>
+        <Draggable draggableId={String(task.id)} index={index}>
             {(provided, snapshot) => (
                 <div
                     ref={provided.innerRef}
@@ -34,8 +34,7 @@ export default function Task({
                         ${snapshot.isDragging ? "shadow-lg ring-2 ring-blue-400 opacity-90 z-50 rotate-1" : "shadow-sm border border-gray-200"}
                     `}
                 >
-                    {/* SỬA: Giờ đây task.content đã hợp lệ */}
-                    {task.content.title}
+                    {task.title}
 
                     <div className="flex flex-row items-center justify-between mt-2">
                         <div className="flex flex-row items-center">
@@ -47,7 +46,7 @@ export default function Task({
                         </div>
                         <div className="flex flex-row items-center">
                             {/* SỬA: Thêm kiểu dữ liệu cho tham số map để fix lỗi TS7006 */}
-                            {task.assignees.map((assignee, idx) => (
+                            {task.assignees?.map((assignee, idx) => (
                                 <div
                                     key={idx}
                                     title={assignee.name} // Hiện tên khi hover

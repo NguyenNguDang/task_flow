@@ -21,7 +21,7 @@ export const Sprint = ({ title, tasks, sprintId, renderPriority, status, isAnySp
             // Case 1: Sprint này ĐANG chạy -> Hiện nút Complete
             return (
                 <button
-                    onClick={() => onCompleteSprint && onCompleteSprint(sprintId)}
+                    onClick={() => onCompleteSprint && onCompleteSprint(sprintId) }
                     className="px-3 py-1 bg-[#ebecf0] hover:bg-gray-300 rounded text-[#42526e] font-medium transition-colors text-xs"
                 >
                     Complete sprint

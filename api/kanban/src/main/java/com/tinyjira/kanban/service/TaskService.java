@@ -1,11 +1,12 @@
 package com.tinyjira.kanban.service;
 
 import com.tinyjira.kanban.DTO.request.TaskRequest;
-import com.tinyjira.kanban.DTO.response.BoardDetailResponse;
-import com.tinyjira.kanban.DTO.response.TaskDetailResponse;
 
-import javax.validation.Valid;
-import javax.validation.constraints.Min;
+import com.tinyjira.kanban.DTO.response.TaskDetailResponse;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+
+
 import java.util.List;
 
 public interface TaskService {

@@ -4,6 +4,10 @@ import com.tinyjira.kanban.DTO.request.MoveTaskRequest;
 import com.tinyjira.kanban.DTO.request.TaskRequest;
 import com.tinyjira.kanban.DTO.response.TaskDetailResponse;
 import com.tinyjira.kanban.service.TaskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -11,9 +15,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
-import javax.validation.constraints.Min;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Validated
 @RestController
@@ -21,6 +26,7 @@ import java.util.List;
 @RequestMapping("api/v1/tasks")
 @Slf4j(topic = "TASK-CONTROLLER")
 @CrossOrigin(origins = "http://localhost:5173")
+@Tag(name = "Task Controller", description = "Quản lý các công việc")
 public class TaskController {
     private final TaskService taskService;
     
@@ -32,14 +38,20 @@ public class TaskController {
     @GetMapping("/{boardId}/list")
     public ResponseEntity<?> getAllTasksByBoardId(@PathVariable @Min(1) Long boardId) {
         List<TaskDetailResponse> taskResponse = taskService.getTasksByBoardId(boardId);
-        
         return ResponseEntity.ok(taskResponse);
     }
     
     @PostMapping
+    @Operation(summary = "Create a new task", description = "API này dùng để tạo task mới vào cột")
     public ResponseEntity<?> createTask(@RequestBody @Valid TaskRequest taskRequest) {
         TaskDetailResponse response = taskService.createTask(taskRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "Tạo task thành công!");
+        result.put("data", response);
+        
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(result);
     }
     
     @PutMapping("/update-position")

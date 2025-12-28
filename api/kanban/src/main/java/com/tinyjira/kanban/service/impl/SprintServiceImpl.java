@@ -13,10 +13,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
 
 @Slf4j
 @Service
@@ -64,12 +63,31 @@ public class SprintServiceImpl implements SprintService {
     
     @Override
     public List<SprintDTO> getAllSprintsByBoardId(Long boardId) {
-        List<Sprint> sprints = sprintRepository.findByBoardId(boardId);
+        List<Sprint> sprints = sprintRepository.findByBoardIdAndStatusNot(boardId, SprintStatus.COMPLETED);
         return sprints.stream().map(this::toSprintDTO).toList();
     }
     
+    @Override
+    public void completeSprint(Long id) {
+        Sprint sprint = getSprintById(id);
+        sprint.complete();
+        sprintRepository.save(sprint);
+       
+    }
+    
+    @Override
+    public void startSprint(Long id) {
+        Sprint sprint = getSprintById(id);
+        sprint.start();
+        sprintRepository.save(sprint);
+    }
+    
+    private Sprint getSprintById(Long id) {
+        return sprintRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found"));
+    }
+    
     private Sprint toSprint(SprintRequest request,  Board currentBoard ) {
-        
         return Sprint.builder()
                 .name(request.getName())
                 .board(currentBoard)

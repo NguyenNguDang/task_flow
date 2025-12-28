@@ -1,12 +1,11 @@
 package com.tinyjira.kanban.service;
 
 import com.tinyjira.kanban.DTO.BoardDTO;
-import com.tinyjira.kanban.DTO.BoardDTO1;
 import com.tinyjira.kanban.DTO.request.BoardRequest;
 import com.tinyjira.kanban.DTO.response.BoardDetailResponse;
-import com.tinyjira.kanban.model.Board;
+import jakarta.validation.Valid;
 
-import javax.validation.Valid;
+
 import java.util.List;
 
 public interface BoardService {

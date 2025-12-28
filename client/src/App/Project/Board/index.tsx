@@ -12,6 +12,7 @@ import {toast} from "react-toastify";
 import {Button} from "../../../Components/Button.tsx";
 import AddColumnModal from "../../../Components/AddColumnModal.tsx";
 
+
 interface InnerListColumnProps {
     index: number;
     column: ColumnType;
@@ -113,7 +114,9 @@ class TaskAndColumnOrderManager {
 
 const InnerListColumn = memo((props: InnerListColumnProps) => {
     const { index, column, taskMap, onTaskCreated } = props;
-    const tasks = column.taskIds.map((taskId) => taskMap[taskId]);
+    const tasks = column.taskIds
+        .map((taskId) => taskMap[taskId])
+        .filter((task) => task !== undefined);
     return <Column index={index} column={column} tasks={tasks} onTaskCreated={onTaskCreated} />;
 });
 
@@ -142,10 +145,8 @@ export async function loadBoardData({ params }: any) {
         // console.log("Columns", columns);
 
         // Tìm active sprint để hiển thị tên trên UI
-        const activeSprintInfo = sprints ? sprints.find((s: any) =>
-            s.status === "ACTIVE" || s.status === "active" || s.status === "IN_PROGRESS"
-        ) : null;
-
+        const activeSprintInfo = sprints ? sprints
+            .find((s: any) => s.status === "active") : null;
         // Gom dữ liệu để convert
         const rawData = {
             tasks: tasks || [],
@@ -167,7 +168,7 @@ export async function loadBoardData({ params }: any) {
 
 export default function Board() {
     const context = useOutletContext() as any;
-    const { boardData } = context;
+    const { boardData, activeSprint } = context;
     const [data, setData] = useState(boardData);
     const [isAddColumnModal, setIsAddColumnModal] = useState(false);
     const { id: boardIdParam } = useParams();
@@ -181,7 +182,7 @@ export default function Board() {
         const newColumnForUI = {
             id: newColId,
             title: newColumnBackend.title,
-            taskIds: [], // Cột mới chưa có task nào
+            taskIds: [],
         };
 
         setData((prevData: any) => ({
@@ -201,13 +202,15 @@ export default function Board() {
             title: title,
             columnId: Number(columnId),
             projectId: Number(boardIdParam),
-            priority: 'medium'
+            priority: 'medium',
+            boardId: Number(boardIdParam),
+            sprintId: activeSprint.id
         };
 
         try {
             const response = await taskService.create(payload);
             const newTask = response.data;
-
+            console.log("New task", newTask);
             console.log("Task vừa tạo có ID là:", newTask.id);
 
             setData((prevData: any) => {

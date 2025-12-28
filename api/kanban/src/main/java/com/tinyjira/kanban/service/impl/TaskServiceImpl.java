@@ -4,13 +4,11 @@ import com.tinyjira.kanban.DTO.request.TaskRequest;
 import com.tinyjira.kanban.DTO.response.BoardDetailResponse;
 import com.tinyjira.kanban.DTO.response.TaskDetailResponse;
 import com.tinyjira.kanban.exception.ResourceNotFoundException;
-import com.tinyjira.kanban.model.BoardColumn;
-import com.tinyjira.kanban.model.Sprint;
-import com.tinyjira.kanban.model.Task;
-import com.tinyjira.kanban.model.User;
+import com.tinyjira.kanban.model.*;
 import com.tinyjira.kanban.repository.*;
 import com.tinyjira.kanban.service.TaskService;
 import com.tinyjira.kanban.utils.SprintStatus;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +22,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class TaskServiceImpl implements TaskService {
     private final TaskRepository taskRepository;
     private final ColumnRepository columnRepository;
@@ -91,8 +90,16 @@ public class TaskServiceImpl implements TaskService {
     
     @Override
     public TaskDetailResponse createTask(TaskRequest taskRequest) {
-        Task task = new Task();
-        return null;
+        Task task = toEntity(taskRequest);
+        Double maxPosition = taskRepository.findMaxPositionByBoardColumnId(taskRequest.getColumnId());
+        if (maxPosition == null) {
+            task.setPosition(1000.0);
+        } else {
+            task.setPosition(maxPosition + 1000.0);
+        }
+        taskRepository.save(task);
+        log.info("Created new task!");
+        return toDto(task);
     }
     
     private double calculateNewPosition(List<Task> tasks, int index) {
@@ -161,12 +168,18 @@ public class TaskServiceImpl implements TaskService {
     private Task toEntity(TaskRequest taskRequest) {
         BoardColumn column = boardColumnRepository.findById(taskRequest.getColumnId())
             .orElseThrow(() -> new ResourceNotFoundException("Column not found!"));
+        Board board = boardRepository.findById(taskRequest.getBoardId())
+                .orElseThrow(() -> new ResourceNotFoundException("Board not found!"));
+        Sprint sprint = sprintRepository.findById(taskRequest.getSprintId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found!"));
         
         return Task.builder()
                 .title(taskRequest.getTitle())
                 .description(taskRequest.getDescription())
                 .priority(taskRequest.getPriority())
                 .boardColumn(column)
+                .board(board)
+                .sprint(sprint)
                 .build();
     }
 }

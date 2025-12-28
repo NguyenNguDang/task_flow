@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { Droppable } from "@hello-pangea/dnd";
 import {Column as ColumnType, TaskCard} from "types";
 import Task from "./Task";

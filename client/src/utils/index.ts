@@ -43,10 +43,8 @@ export function convertToAppropriateFormat(data: any) {
 
         board.tasks[taskIdStr] = {
             id: taskIdStr,
-            content: {
-                title: task.title,
-                description: task.description,
-            },
+            title: task.title,
+            description: task.description,
             assignees: task.assigneeName ? [{
                 name: task.assigneeName,
                 avatar: task.assigneeAvatar
