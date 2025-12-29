@@ -71,8 +71,9 @@ public class SprintController {
     }
     
     @PatchMapping("/{id}/complete")
-    public ResponseEntity<?> completeSprint(@PathVariable @Min(1) Long id) {
-        sprintService.completeSprint(id);
+    public ResponseEntity<?> completeSprint(@PathVariable @Min(1) Long id,
+                                            @RequestParam(required = false) Long targetSprintId) {
+        sprintService.completeSprint(id, targetSprintId);
         log.info("Completed Sprint with id {}", id);
         return ResponseEntity.noContent().build();
     }
