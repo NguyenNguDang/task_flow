@@ -127,18 +127,18 @@ export async function loadBoardData({ params }: any) {
         console.log(`Fetching data for board: ${boardId} from ${BACKEND_URL}`);
 
         const [tasksRes, sprintsRes, columnsRes] = await Promise.all([
-            // 1. Lấy Task của Active Sprint
+            // 1.Call API get All tasks of Active Sprint
             axios.get(`${BACKEND_URL}/tasks/${boardId}/active-sprint`),
 
-            // 2. Lấy danh sách Sprint (để biết cái nào Active)
+            // 2. Call API get Sprints
             axios.get(`${BACKEND_URL}/sprint/${boardId}/list`),
 
-            // 3. Lấy cấu trúc Cột (To Do, Done...)
+            // 3. Call API Get columns
             axios.get(`${BACKEND_URL}/boards/${boardId}/columns`)
         ]);
 
         const tasks = tasksRes.data;
-        // console.log("Tasks loaded", tasks);
+        console.log("Tasks loaded", tasks);
         const sprints = sprintsRes.data;
         // console.log("Sprints", sprints);
         const columns = columnsRes.data;

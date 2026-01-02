@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -58,6 +59,20 @@ public class Sprint extends AbstractEntity<Long>{
         }
         this.status = SprintStatus.ACTIVE;
         this.startedAt = LocalDateTime.now();
+    }
+    
+    public void rolloverUnfinishedTasks(List<Task> tasks, Sprint sprint) {
+        List<Task> unfinishedTasks = tasks.stream()
+                .filter(Task::isUnfinished)
+                .toList();
+        
+        for (Task task : unfinishedTasks) {
+            if (sprint != null) {
+                task.migrateToSprint(sprint);
+            } else {
+                task.moveToBacklog();
+            }
+        }
     }
     
     //date time

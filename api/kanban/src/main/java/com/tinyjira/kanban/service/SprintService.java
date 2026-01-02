@@ -19,7 +19,7 @@ public interface SprintService {
     
     List<SprintDTO> getAllSprintsByBoardId( Long boardId);
     
-    void completeSprint(@Min(1) Long id);
+    void completeSprint(@Min(1) Long id, Long targetSprintId);
     
     void startSprint(@Min(1) Long id);
     

@@ -3,6 +3,7 @@ package com.tinyjira.kanban.repository;
 import java.util.List;
 
 import com.tinyjira.kanban.model.BoardColumn;
+import com.tinyjira.kanban.utils.TaskStatus;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
@@ -10,9 +11,6 @@ import org.springframework.data.repository.query.Param;
 import com.tinyjira.kanban.model.Task;
 
 public interface TaskRepository extends CrudRepository<Task, Long> {
-
-    @Query(value = "SELECT * FROM tbl_task where board_column_id = :column_id", nativeQuery = true)
-    public List<Task> getAllColumnTasks(@Param("column_id") Long columnId);
     
     List<Task> findByBoardColumnOrderByPositionAsc(BoardColumn boardColumn);
     
@@ -32,4 +30,5 @@ public interface TaskRepository extends CrudRepository<Task, Long> {
     
     @Query("SELECT MAX(t.position) FROM Task t WHERE t.boardColumn.id = :columnId")
     Double findMaxPositionByBoardColumnId(Long columnId);
+    
 }

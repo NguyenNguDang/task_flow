@@ -97,23 +97,28 @@ export default function Backlog() {
         }
     };
 
-    const handleCompleteSprint = async (sprintId: number) => {
+    const handleCompleteSprint = async (sprintId: number, targetSprintId: number|null) => {
         console.log("Complete sprint:", sprintId);
         // Call API complete sprint
         try {
-            const res = await  axios.patch(`${BACKEND_URL}/sprint/${sprintId}/complete`);
+            const res = await  axios.patch(`${BACKEND_URL}/sprint/${sprintId}/complete`, {},
+                {
+                    params: {
+                        targetSprintId: targetSprintId
+                    }
+                });
             if (res.status === 204) {
                 toast.success("Hoàn thành Sprint thành công!");
 
                 // TODO: Cập nhật state của React ở đây để UI thay đổi ngay lập tức
+                // 1. Xóa Sprint vừa xong khỏi UI
                 setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
+
+                // 2. Cập nhật Task chưa xong
                 setAllTasks(prevTasks => prevTasks.map(task => {
-                    // Nếu task thuộc sprint vừa xóa VÀ chưa xong
                     if (task.sprintId === sprintId && task.status !== 'done') {
-                        // Gán sprintId = null để nó hiển thị ở BacklogSection
-                        return { ...task, sprintId: null };
+                        return { ...task, sprintId: targetSprintId ?? null };
                     }
-                    // Nếu task đã DONE, ta có thể giữ nguyên hoặc ẩn đi tùy logic (thường là giữ nguyên id sprint cũ để báo cáo, nhưng BacklogSection sẽ không render nó vì nó có sprintId)
                     return task;
                 }));
             }
@@ -156,6 +161,7 @@ export default function Backlog() {
                     <Sprint
                         key={sprint.id}
                         sprintId={sprint.id}
+                        allSprints={sprints}
                         title={sprint.name}
                         tasks={getTasksForSprint(sprint.id)}
                         renderPriority={renderPriority}

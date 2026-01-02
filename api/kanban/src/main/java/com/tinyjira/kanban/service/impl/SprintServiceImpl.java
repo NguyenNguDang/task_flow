@@ -5,10 +5,13 @@ import com.tinyjira.kanban.DTO.request.SprintRequest;
 import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.Board;
 import com.tinyjira.kanban.model.Sprint;
+import com.tinyjira.kanban.model.Task;
 import com.tinyjira.kanban.repository.BoardRepository;
 import com.tinyjira.kanban.repository.SprintRepository;
+import com.tinyjira.kanban.repository.TaskRepository;
 import com.tinyjira.kanban.service.SprintService;
 import com.tinyjira.kanban.utils.SprintStatus;
+import com.tinyjira.kanban.utils.TaskStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,7 @@ import java.util.Optional;
 public class SprintServiceImpl implements SprintService {
     private final SprintRepository sprintRepository;
     private final BoardRepository boardRepository;
+    private final TaskRepository taskRepository;
     
     
     @Override
@@ -68,11 +72,14 @@ public class SprintServiceImpl implements SprintService {
     }
     
     @Override
-    public void completeSprint(Long id) {
-        Sprint sprint = getSprintById(id);
+    public void completeSprint(Long sprintId, Long targetSprintId) {
+        Sprint sprint = getSprintById(sprintId);
+        Sprint targetSprint = getSprintById(targetSprintId);
+        
+        List<Task> allTasksInSprint = taskRepository.findBySprintId(sprintId);
         sprint.complete();
+        sprint.rolloverUnfinishedTasks(allTasksInSprint, targetSprint);
         sprintRepository.save(sprint);
-       
     }
     
     @Override

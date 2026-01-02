@@ -59,4 +59,19 @@ public class Task extends AbstractEntity<Long> {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sprint_id")
     private Sprint sprint;
+    
+    public boolean isUnfinished(){
+        return this.status != TaskStatus.DONE;
+    }
+    
+    public void moveToBacklog(){
+        this.sprint = null;
+    }
+    
+    public void migrateToSprint(Sprint nextSprint) {
+        if (nextSprint == null) {
+            throw new IllegalArgumentException("Target Sprint cannot be null");
+        }
+        this.sprint = nextSprint;
+    }
 }
