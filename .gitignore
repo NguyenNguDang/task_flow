@@ -44,6 +44,7 @@ target/
 *.tar.gz
 *.rar
 
+<<<<<<< HEAD
 # Logs
 logs/
 *.log
@@ -101,3 +102,13 @@ coverage/
 *.tmp
 *.bak
 *.swp
+=======
+#Enviroment
+application.yml
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+replay_pid*
+.vscode
+.git
+>>>>>>> main

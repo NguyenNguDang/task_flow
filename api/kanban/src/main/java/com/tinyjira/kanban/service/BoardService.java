@@ -5,7 +5,6 @@ import com.tinyjira.kanban.DTO.request.BoardRequest;
 import com.tinyjira.kanban.DTO.response.BoardDetailResponse;
 import jakarta.validation.Valid;
 
-
 import java.util.List;
 
 public interface BoardService {

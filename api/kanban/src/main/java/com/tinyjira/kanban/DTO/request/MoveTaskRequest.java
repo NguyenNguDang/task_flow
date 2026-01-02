@@ -1,6 +1,5 @@
 package com.tinyjira.kanban.DTO.request;
 
-
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
