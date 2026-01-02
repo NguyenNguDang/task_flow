@@ -1,11 +1,8 @@
 package com.tinyjira.kanban.controller;
 
 import com.tinyjira.kanban.DTO.BoardDTO;
-import com.tinyjira.kanban.DTO.BoardDTO1;
 import com.tinyjira.kanban.DTO.request.BoardRequest;
 import com.tinyjira.kanban.DTO.response.BoardDetailResponse;
-import com.tinyjira.kanban.model.Board;
-import com.tinyjira.kanban.model.BoardColumn;
 import com.tinyjira.kanban.service.BoardColumnService;
 import com.tinyjira.kanban.service.BoardService;
 import jakarta.validation.Valid;
@@ -14,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-;
+
 import java.util.List;
 
 @Validated
