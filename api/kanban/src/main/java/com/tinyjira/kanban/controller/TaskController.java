@@ -4,6 +4,8 @@ import com.tinyjira.kanban.DTO.request.MoveTaskRequest;
 import com.tinyjira.kanban.DTO.request.TaskRequest;
 import com.tinyjira.kanban.DTO.response.TaskDetailResponse;
 import com.tinyjira.kanban.service.TaskService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -11,8 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
-import javax.validation.constraints.Min;
 import java.util.List;
 
 @Validated
