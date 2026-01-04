@@ -11,6 +11,7 @@ import {taskService} from "../../../services/task.service.tsx";
 import {toast} from "react-toastify";
 import {Button} from "../../../Components/Button.tsx";
 import AddColumnModal from "../../../Components/AddColumnModal.tsx";
+import MenuHeader from "../../../Components/MenuHeader";
 
 
 interface InnerListColumnProps {
@@ -293,33 +294,38 @@ export default function Board() {
     };
 
 
-    return (
-        <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex my-3">
-                <div className="w-[90%]"></div>
-                <div className="flex-1">
-                    <Button className="py-10" onClick={() => setIsAddColumnModal(true)}>+Thêm column</Button>
+    return (<>
+
+            <DragDropContext onDragEnd={onDragEnd}>
+                <div className="flex flex-col h-full ">
+                    <MenuHeader/>
+                    <div className="flex justify-end items-center my-3">
+                        <div>
+
+                        </div>
+                    </div>
+                    <div className="flex flex-row bg-white flex-grow items-start p-4">
+                        {data.columnOrder.map((columnId: string, index: number) => {
+                            const column = data.columns[columnId];
+                            return (
+                                <InnerListColumn
+                                    index={index}
+                                    key={columnId}
+                                    column={column}
+                                    taskMap={data.tasks}
+                                    onTaskCreated={handleCreateTask}
+                                />
+                            );
+                        })}
+                        <Button className="mx-4 py-10 px-4" onClick={() => setIsAddColumnModal(true)}>+Thêm column</Button>
+                    </div>
+                    {isAddColumnModal && (
+                        <AddColumnModal boardId={1}
+                                        onClose={() => setIsAddColumnModal(false)}
+                                        onSuccess={handleColumnAdded}/>
+                    )}
                 </div>
-            </div>
-            <div className="flex flex-row bg-white flex-grow items-start p-4">
-                {data.columnOrder.map((columnId: string, index: number) => {
-                    const column = data.columns[columnId];
-                    return (
-                        <InnerListColumn
-                            index={index}
-                            key={columnId}
-                            column={column}
-                            taskMap={data.tasks}
-                            onTaskCreated={handleCreateTask}
-                        />
-                    );
-                })}
-            </div>
-            {isAddColumnModal && (
-                <AddColumnModal boardId={1}
-                                onClose={() => setIsAddColumnModal(false)}
-                                onSuccess={handleColumnAdded}/>
-            )}
-        </DragDropContext>
+            </DragDropContext>
+    </>
     );
 }

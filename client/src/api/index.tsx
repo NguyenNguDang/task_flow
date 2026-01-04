@@ -18,9 +18,19 @@ axiosClient.interceptors.request.use((config) => {
 });
 
 axiosClient.interceptors.response.use(
-    (response) => response.data, // Trả về data trực tiếp cho gọn
+    (response) => response,
     (error) => {
-        // Handle lỗi chung ở đây
+        if (error.response?.status === 401) {
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
+axiosClient.interceptors.response.use(
+    (response) => response.data,
+    (error) => {
         return Promise.reject(error);
     }
 );

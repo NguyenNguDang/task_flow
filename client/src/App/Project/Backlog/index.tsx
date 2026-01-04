@@ -7,6 +7,7 @@ import {useParams} from "react-router-dom";
 import {BACKEND_URL} from "../../../Constants";
 import axios from "axios";
 import {toast} from "react-toastify";
+import MenuHeader from "../../../Components/MenuHeader";
 
 export default function Backlog() {
     const [search, setSearch] = useState('');
@@ -131,55 +132,59 @@ export default function Backlog() {
     if (loading) return <div>Loading board...</div>;
 
     return (
-        <div className="p-8 h-full w-full overflow-y-auto bg-white">
-            {/* --- HEADER --- */}
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                    <input
-                        type="text"
-                        placeholder="Search tasks"
-                        className="border-2 border-gray-100 bg-gray-50 focus:bg-white focus:border-blue-500 rounded px-3 py-2 w-64 outline-none transition-colors text-sm text-[#172b4d]"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <div className="flex -space-x-2">
-                        {['D', 'H', 'T'].map((user, idx) => (
-                            <div key={idx} className="w-8 h-8 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-xs font-bold text-blue-800 cursor-pointer hover:-translate-y-1 transition-transform">
-                                {user}
-                            </div>
-                        ))}
+        <div className="w-screen">
+            <MenuHeader/>
+            <div className="p-8 h-full w-full overflow-y-hidden bg-white">
+                {/* --- HEADER --- */}
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                        <input
+                            type="text"
+                            placeholder="Search tasks"
+                            className="border-2 border-gray-100 bg-gray-50 focus:bg-white focus:border-blue-500 rounded px-3 py-2 w-64 outline-none transition-colors text-sm text-[#172b4d]"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                        <div className="flex -space-x-2">
+                            {['D', 'H', 'T'].map((user, idx) => (
+                                <div key={idx} className="w-8 h-8 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-xs font-bold text-blue-800 cursor-pointer hover:-translate-y-1 transition-transform">
+                                    {user}
+                                </div>
+                            ))}
+                        </div>
                     </div>
+
+                    {/*Create Sprint Button*/}
+                    <CreateSprintButton boardId={numericBoardId} onSprintCreated={handleSprintCreated} />
                 </div>
 
-                {/*Create Sprint Button*/}
-                <CreateSprintButton boardId={numericBoardId} onSprintCreated={handleSprintCreated} />
-            </div>
+                {/* --- LIST SPRINTS --- */}
+                <div className="flex flex-col gap-6">
+                    {sprints.map((sprint) => (
+                        <Sprint
+                            key={sprint.id}
+                            sprintId={sprint.id}
+                            allSprints={sprints}
+                            title={sprint.name}
+                            tasks={getTasksForSprint(sprint.id)}
+                            renderPriority={renderPriority}
+                            status={sprint.status}
+                            isAnySprintActive={hasActiveSprint}
+                            onStartSprint={handleStartSprint}
+                            onCompleteSprint={handleCompleteSprint}
+                        />
+                    ))}
+                </div>
 
-            {/* --- LIST SPRINTS --- */}
-            <div className="flex flex-col gap-6">
-                {sprints.map((sprint) => (
-                    <Sprint
-                        key={sprint.id}
-                        sprintId={sprint.id}
-                        allSprints={sprints}
-                        title={sprint.name}
-                        tasks={getTasksForSprint(sprint.id)}
+                {/* --- BACKLOG SECTION --- */}
+                <div className="mt-8">
+                    <BacklogSection
+                        tasks={getBacklogTasks()}
                         renderPriority={renderPriority}
-                        status={sprint.status}
-                        isAnySprintActive={hasActiveSprint}
-                        onStartSprint={handleStartSprint}
-                        onCompleteSprint={handleCompleteSprint}
                     />
-                ))}
-            </div>
-
-            {/* --- BACKLOG SECTION --- */}
-            <div className="mt-8">
-                <BacklogSection
-                    tasks={getBacklogTasks()}
-                    renderPriority={renderPriority}
-                />
+                </div>
             </div>
         </div>
+
     );
 }
