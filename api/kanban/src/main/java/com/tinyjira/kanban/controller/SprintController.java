@@ -2,6 +2,7 @@ package com.tinyjira.kanban.controller;
 
 import com.tinyjira.kanban.DTO.SprintDTO;
 import com.tinyjira.kanban.DTO.request.SprintRequest;
+import com.tinyjira.kanban.DTO.response.SprintReportResponse;
 import com.tinyjira.kanban.service.SprintService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -22,6 +23,11 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:5173")
 public class SprintController {
     private final SprintService sprintService;
+    
+    @GetMapping("/{sprintId}/report")
+    public ResponseEntity<SprintReportResponse> getReport(@PathVariable Long sprintId) {
+        return ResponseEntity.ok(sprintService.getSprintReport(sprintId));
+    }
     
     @PostMapping("/{boardId}")
     public ResponseEntity<SprintDTO> createSprint(@PathVariable @Min(1) Long boardId) {

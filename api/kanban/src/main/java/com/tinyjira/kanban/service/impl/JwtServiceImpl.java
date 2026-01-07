@@ -11,6 +11,7 @@ import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.repository.RedisTokenRepository;
 import com.tinyjira.kanban.service.JwtService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,7 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class JwtServiceImpl implements JwtService {
@@ -73,7 +75,6 @@ public class JwtServiceImpl implements JwtService {
     
     @Override
     public boolean verifyToken(String token) throws ParseException, JOSEException {
-       
         SignedJWT signedJWT = SignedJWT.parse(token);
         //1. check expired time
         Date expiredTime = signedJWT.getJWTClaimsSet().getExpirationTime();

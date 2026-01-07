@@ -29,9 +29,10 @@ public class JwtDecoderConfig implements JwtDecoder {
     
     @Override
     public Jwt decode(String token) throws JwtException {
+        
         log.debug("Decoding JWT token: {}", token);
         try {
-            if(jwtService.verifyToken(token)){
+            if(!jwtService.verifyToken(token)){
              throw new JwtException("JWT verification failed");
             }
             if(Objects.isNull(nimbusJwtDecoder)){

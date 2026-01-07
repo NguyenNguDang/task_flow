@@ -2,14 +2,18 @@ package com.tinyjira.kanban.service.impl;
 
 import com.tinyjira.kanban.DTO.SprintDTO;
 import com.tinyjira.kanban.DTO.request.SprintRequest;
+import com.tinyjira.kanban.DTO.response.ProjectDetailResponse;
+import com.tinyjira.kanban.DTO.response.SprintReportResponse;
 import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.Board;
 import com.tinyjira.kanban.model.Sprint;
 import com.tinyjira.kanban.model.Task;
+import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.repository.BoardRepository;
 import com.tinyjira.kanban.repository.SprintRepository;
 import com.tinyjira.kanban.repository.TaskRepository;
 import com.tinyjira.kanban.service.SprintService;
+import com.tinyjira.kanban.service.strategy.MvpScoringStrategy;
 import com.tinyjira.kanban.utils.SprintStatus;
 import com.tinyjira.kanban.utils.TaskStatus;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +31,7 @@ public class SprintServiceImpl implements SprintService {
     private final SprintRepository sprintRepository;
     private final BoardRepository boardRepository;
     private final TaskRepository taskRepository;
+    private final MvpScoringStrategy mvpScoringStrategy;
     
     
     @Override
@@ -87,6 +92,29 @@ public class SprintServiceImpl implements SprintService {
         Sprint sprint = getSprintById(id);
         sprint.start();
         sprintRepository.save(sprint);
+    }
+    
+    @Override
+    public SprintReportResponse getSprintReport(Long sprintId) {
+        Sprint sprint = sprintRepository.findById(sprintId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found"));
+        
+        long total = taskRepository.countBySprintId(sprintId);
+        long overdue = taskRepository.countOverdueTasks(sprintId);
+        
+        // (Có thể đếm thêm số task DONE nếu cần)
+        long completed = taskRepository.countBySprintIdAndStatus(sprintId, TaskStatus.DONE);
+        
+        User mvp = mvpScoringStrategy.findTopPerformer(sprintId).orElse(null);
+        
+        return SprintReportResponse.builder()
+                .sprintId(sprint.getId())
+                .sprintName(sprint.getName())
+                .totalTasks(total)
+                .completedTasks(completed)
+                .overdueTasks(overdue)
+                .mvpUser(ProjectDetailResponse.UserSummaryDto.fromEntity(mvp))
+                .build();
     }
     
     private Sprint getSprintById(Long id) {

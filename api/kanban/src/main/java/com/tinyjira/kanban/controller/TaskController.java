@@ -1,8 +1,12 @@
 package com.tinyjira.kanban.controller;
 
+import com.tinyjira.kanban.DTO.CommentDto;
+import com.tinyjira.kanban.DTO.request.CreateCommentRequest;
 import com.tinyjira.kanban.DTO.request.MoveTaskRequest;
 import com.tinyjira.kanban.DTO.request.TaskRequest;
 import com.tinyjira.kanban.DTO.response.TaskDetailResponse;
+import com.tinyjira.kanban.model.User;
+import com.tinyjira.kanban.service.CommentService;
 import com.tinyjira.kanban.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +33,7 @@ import java.util.Map;
 @Tag(name = "Task Controller", description = "Quản lý các công việc")
 public class TaskController {
     private final TaskService taskService;
+    private final CommentService commentService;
     
     @GetMapping("/{boardId}/active-sprint")
     public ResponseEntity<?> getTasksInActiveSprint(@PathVariable Long boardId) {
@@ -62,6 +68,16 @@ public class TaskController {
         );
         
         return ResponseEntity.ok("Task moved successfully");
+    }
+    
+    @PostMapping("/{taskId}/comments")
+    public ResponseEntity<?> addComment(
+            @PathVariable Long taskId,
+            @AuthenticationPrincipal User currentUser,
+            @ModelAttribute CreateCommentRequest request
+    ) {
+        CommentDto newComment = commentService.addComment(taskId, currentUser, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(newComment);
     }
     
    

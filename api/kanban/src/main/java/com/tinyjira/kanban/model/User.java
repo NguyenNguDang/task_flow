@@ -30,9 +30,13 @@ public class User extends AbstractEntity<Long> implements UserDetails {
     
     private String bio;
     
+    private String phone;
+    
+    private String address;
+    
     private String avatarUrl;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL)
     private Set<Comment> comments = new HashSet<>();
 
     @ManyToMany(mappedBy = "users")
@@ -46,6 +50,12 @@ public class User extends AbstractEntity<Long> implements UserDetails {
     )
     private Set<Role> roles = new HashSet<>();
     
+    public void updatePhone(String phone){
+        if(phone == null || phone.length() > 15){
+            throw new IllegalArgumentException("Invalid phone");
+        }
+        this.phone = phone;
+    }
     
     public void updateBio(String newBio){
         if(newBio == null || newBio.length() > 500){
@@ -75,7 +85,7 @@ public class User extends AbstractEntity<Long> implements UserDetails {
     
     @Override
     public String getUsername() {
-        return "";
+        return this.email;
     }
     
     @Override

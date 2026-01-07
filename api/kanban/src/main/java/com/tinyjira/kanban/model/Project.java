@@ -75,4 +75,9 @@ public class Project extends AbstractEntity<Long> {
             throw new DomainException("Người dùng này không phải là thành viên của dự án.");
         }
     }
+    
+    public boolean hasMember(User user) {
+        return members.stream()
+                .anyMatch(m -> m.getUser().getId().equals(user.getId()));
+    }
 }

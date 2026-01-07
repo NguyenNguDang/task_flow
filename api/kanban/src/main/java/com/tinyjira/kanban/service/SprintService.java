@@ -2,6 +2,7 @@ package com.tinyjira.kanban.service;
 
 import com.tinyjira.kanban.DTO.SprintDTO;
 import com.tinyjira.kanban.DTO.request.SprintRequest;
+import com.tinyjira.kanban.DTO.response.SprintReportResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 
@@ -22,5 +23,7 @@ public interface SprintService {
     void completeSprint(@Min(1) Long id, Long targetSprintId);
     
     void startSprint(@Min(1) Long id);
+    
+    SprintReportResponse getSprintReport(Long sprintId);
     
 }

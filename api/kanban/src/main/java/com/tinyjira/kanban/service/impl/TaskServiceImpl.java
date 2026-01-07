@@ -3,17 +3,22 @@ package com.tinyjira.kanban.service.impl;
 import com.tinyjira.kanban.DTO.request.TaskRequest;
 import com.tinyjira.kanban.DTO.response.BoardDetailResponse;
 import com.tinyjira.kanban.DTO.response.TaskDetailResponse;
+import com.tinyjira.kanban.event.TaskAssignedEvent;
+import com.tinyjira.kanban.event.TaskEstimationUpdatedEvent;
 import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.*;
 import com.tinyjira.kanban.repository.*;
 import com.tinyjira.kanban.service.TaskService;
 import com.tinyjira.kanban.utils.SprintStatus;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 
+import java.nio.file.AccessDeniedException;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +38,8 @@ public class TaskServiceImpl implements TaskService {
     private final SprintRepository sprintRepository;
     private final BoardRepository boardRepository;
     private final BoardColumnRepository boardColumnRepository;
+    private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
     
     @Override
     public void moveTask(Long taskId, Long targetColumnId, int newIndex) {
@@ -100,6 +107,56 @@ public class TaskServiceImpl implements TaskService {
         taskRepository.save(task);
         log.info("Created new task!");
         return toDto(task);
+    }
+    
+    @Override
+    public void assignTask(Long taskId, Long assigneeId, User currentUser) throws AccessDeniedException {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        
+        if (!task.canBeAssignedBy(currentUser)) {
+            throw new AccessDeniedException("Bạn không có quyền gán task này (Chỉ PM hoặc Creator)");
+        }
+        
+        User assignee = userRepository.findById(assigneeId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
+        if (!task.getBoard().getProject().hasMember(assignee)) {
+            throw new IllegalArgumentException("User này không thuộc dự án, vui lòng mời vào trước!");
+        }
+        
+        task.assign(assignee);
+        taskRepository.save(task);
+        
+        eventPublisher.publishEvent(new TaskAssignedEvent(
+                task.getTitle(),
+                assignee.getEmail(),
+                currentUser.getUsername()
+        ));
+    
+    }
+    
+    @Override
+    @Transactional
+    public void estimateTask(Long taskId, Double hours) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        
+        Double oldEstimate = task.getEstimateHours();
+        
+        task.updateEstimation(hours);
+        
+        taskRepository.save(task);
+        
+        if (task.getSprint() != null) {
+            eventPublisher.publishEvent(new TaskEstimationUpdatedEvent(
+                    task.getId(),
+                    task.getSprint().getId(),
+                    task.getEstimateHours(),
+                    oldEstimate,
+                    LocalDateTime.now()
+            ));
+        }
     }
     
     private double calculateNewPosition(List<Task> tasks, int index) {

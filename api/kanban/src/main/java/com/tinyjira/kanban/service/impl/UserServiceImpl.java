@@ -3,13 +3,12 @@ package com.tinyjira.kanban.service.impl;
 import com.tinyjira.kanban.DTO.request.RegisterRequest;
 import com.tinyjira.kanban.DTO.request.UpdateProfileRequest;
 import com.tinyjira.kanban.DTO.response.RegisterResponse;
+import com.tinyjira.kanban.DTO.response.UserDetailResponse;
+import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.repository.UserRepository;
 import com.tinyjira.kanban.service.UserService;
-import com.tinyjira.kanban.service.command.ChangePasswordCommand;
-import com.tinyjira.kanban.service.command.UpdateAvatarCommand;
-import com.tinyjira.kanban.service.command.UpdateBioCommand;
-import com.tinyjira.kanban.service.command.UpdateProfileCommand;
+import com.tinyjira.kanban.service.command.*;
 import com.tinyjira.kanban.service.strategy.FileStorageStrategy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -35,6 +34,7 @@ public class UserServiceImpl implements UserService {
         }
         
         User user = User.builder()
+                .name(req.getName())
                 .email(req.getEmail())
                 .password(passwordEncoder.encode(req.getPassword()))
                 .build();
@@ -46,6 +46,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public void executeUpdates(User currentUser, UpdateProfileRequest request) {
         List<UpdateProfileCommand> commands = new ArrayList<>();
+        
+        if (request.getPhone() != null) {
+            commands.add(new UpdatePhoneCommand(request.getPhone()));
+        }
+        
         
         if (request.getBio() != null) {
             commands.add(new UpdateBioCommand(request.getBio()));
@@ -76,5 +81,20 @@ public class UserServiceImpl implements UserService {
             cmd.execute(currentUser);
         }
         userRepository.save(currentUser);
+    }
+    
+    @Override
+    public UserDetailResponse getMyProfile(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
+        return UserDetailResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .avatarUrl(user.getAvatarUrl())
+                .build();
     }
 }

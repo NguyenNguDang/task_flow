@@ -32,6 +32,10 @@ public class Board extends AbstractEntity<Long> {
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL)
     private Set<BoardColumn> columns = new HashSet<>();
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private Project project;
+    
     public Board(String title, String description) {
         super();
         this.title = title;

@@ -18,12 +18,13 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class AppConfig {
-    private static final String[] WHITE_LIST = {"/api/v1/**", "/v3/api-docs/**",
+    private static final String[] WHITE_LIST = { "api/v1/**", "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html"};
     
     private final UserDetailServiceCustomizer userDetailServiceCustomizer;
     private final JwtDecoderConfig jwtDecoderConfig;
+    private final JwtToUserConverter jwtToUserConverter;
     
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -34,7 +35,9 @@ public class AppConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer((oauth2) -> oauth2.jwt(
-                        jwtConfigurer -> jwtConfigurer.decoder(jwtDecoderConfig)
+                        jwtConfigurer -> jwtConfigurer
+                                .decoder(jwtDecoderConfig)
+                                .jwtAuthenticationConverter(jwtToUserConverter)
                 ));
         return http.build();
     }

@@ -3,6 +3,7 @@ package com.tinyjira.kanban.controller;
 import com.tinyjira.kanban.DTO.request.RegisterRequest;
 import com.tinyjira.kanban.DTO.request.UpdateProfileRequest;
 import com.tinyjira.kanban.DTO.response.RegisterResponse;
+import com.tinyjira.kanban.DTO.response.UserDetailResponse;
 import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.service.UserService;
 import jakarta.validation.Valid;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +26,12 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
     
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal User user) {
+        UserDetailResponse response = userService.getMyProfile(user.getUsername());
+        return ResponseEntity.ok(response);
+    }
+    
     @PostMapping
     public ResponseEntity<?> createUser(@Valid @RequestBody RegisterRequest req) {
         RegisterResponse response = userService.createUser(req);
@@ -32,7 +40,7 @@ public class UserController {
                 .body(response);
     }
     
-    @PutMapping
+    @PutMapping("/me")
     public ResponseEntity<?> updateProfileUser(@AuthenticationPrincipal User currentUser,
                                                @Valid @RequestBody UpdateProfileRequest req) {
         userService.executeUpdates(currentUser, req);

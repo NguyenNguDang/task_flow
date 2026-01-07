@@ -1,41 +1,48 @@
-// 1. Đổi import: Dùng useRouteLoaderData thay vì useOutletContext
-import { useRouteLoaderData } from "react-router-dom";
+import {useAuth} from "../../context/AuthContext.tsx";
 
-export default function Title() {
-    // 2. Lấy dữ liệu dựa trên Router ID "project-detail" mà ta đã cấu hình ở file router
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = useRouteLoaderData("project-detail") as any;
+interface TitleProps extends HTMLAttributes<HTMLDivElement> {
+}
+export default function Title({ className, ...props }: TitleProps) {
+    const { user } = useAuth();
 
-    // 3. Safety Check: Nếu chưa vào project (data null) hoặc đang load thì không render
-    if (!data || !data.boardData) {
+
+    if (!user) {
         return (
-            <div className="flex flex-row items-center w-full h-fit py-6 px-4">
-                {/* Skeleton loading đơn giản */}
-                <div className="size-10 rounded-md bg-gray-200 animate-pulse"></div>
+            <div className="flex flex-row items-center w-full h-fit py-6 px-4 ">
+                <div className="size-10 rounded-full bg-gray-200 animate-pulse"></div>
                 <div className="pt-[3px] pl-[10px] space-y-2">
                     <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
                 </div>
             </div>
         );
     }
 
-    const { boardData } = data;
-
     return (
-        <div className="flex flex-row items-center w-full h-fit py-6 px-4">
-            {/* Icon Project */}
-            <div className="size-10 rounded-md bg-red-300 flex items-center justify-center text-white font-bold text-lg">
-                {/* Lấy chữ cái đầu của tên project */}
-                {boardData.metaData.title.charAt(0).toUpperCase()}
+        <div className={`cursor-pointer flex flex-row items-center w-full h-fit py-6 px-4 ${className}`}
+             {...props}>
+            {/* Avatar User */}
+            <div className="size-10 min-w-[40px] rounded-full overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center bg-indigo-500 text-white font-bold text-lg">
+                {user.avatarUrl ? (
+                    <img
+                        src={user.avatarUrl}
+                        alt={user.name}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <span>
+                        {user.name?.charAt(0).toUpperCase() || "U"}
+                    </span>
+                )}
             </div>
 
-            <div className="pt-[3px] pl-[10px]">
-                <div className="text-[14px] text-[#42526e] font-CircularStdMedium font-[700]">
-                    {boardData.metaData.title}
+            {/* Thông tin tên & Email */}
+            <div className="pt-[1px] pl-[10px] overflow-hidden">
+                <div className="text-[14px] text-[#172b4d] font-bold truncate">
+                    {user.name || "Unknown User"}
                 </div>
-                <div className="text-[14px] text-[#5e6c84] font-CircularStdMedium">
-                    Software Project
+                <div className="text-[12px] text-[#5e6c84] truncate" title={user.email}>
+                    {user.email}
                 </div>
             </div>
         </div>

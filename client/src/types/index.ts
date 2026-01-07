@@ -86,3 +86,13 @@ export interface CreateTaskRequest {
     boardId: number;
     sprintId: number;
 }
+
+export interface User {
+    id: number;
+    email: string;
+    fullName: string;
+    phone?: string;
+    address?: string;
+    avatarUrl?: string;
+    roles?: string[];
+}

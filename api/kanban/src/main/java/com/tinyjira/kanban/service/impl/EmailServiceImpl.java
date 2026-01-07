@@ -9,4 +9,8 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
+    @Override
+    public void sendEmail(String userEmail, String subject, String body) {
+    
+    }
 }

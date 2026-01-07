@@ -7,7 +7,7 @@ const FeatureSection = () => {
                     Features
                 </h2>
 
-                <div className="flex flex-col gap-6 px-4">
+                <div className="flex flex-row gap-6 px-4">
                     {[
                         {
                             icon: "calendar_month",
