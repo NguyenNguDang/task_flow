@@ -229,7 +229,6 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found!"));
         Sprint sprint = sprintRepository.findById(taskRequest.getSprintId())
                 .orElseThrow(() -> new ResourceNotFoundException("Sprint not found!"));
-        
         return Task.builder()
                 .title(taskRequest.getTitle())
                 .description(taskRequest.getDescription())

@@ -24,21 +24,21 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
             {
-                path: "/project/:id",
+                path: "/project/:projectId",
                 element: <App />,
-                loader: loadBoardData,
                 children: [
                     {
-                        path: "board",
-                        element: <Board />
+                        path: "board/:boardId",
+                        element: <Board />,
+                        loader: loadBoardData
                     },
                     {
-                        path: "backlog",
+                        path: "backlog/:boardId",
                         element: <Backlog />
                     },
                     {
                         index: true,
-                        element: <Navigate to="board" replace />
+                        element: <Navigate to="backlog" replace />
                     }
                 ]
             }

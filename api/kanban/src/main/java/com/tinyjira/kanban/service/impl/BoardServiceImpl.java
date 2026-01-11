@@ -6,8 +6,10 @@ import com.tinyjira.kanban.DTO.response.BoardDetailResponse;
 import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.Board;
 import com.tinyjira.kanban.model.BoardColumn;
+import com.tinyjira.kanban.model.Project;
 import com.tinyjira.kanban.model.Task;
 import com.tinyjira.kanban.repository.BoardRepository;
+import com.tinyjira.kanban.repository.ProjectRepository;
 import com.tinyjira.kanban.service.BoardService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,17 +25,22 @@ import java.util.List;
 @Slf4j(topic = "BOARD-SERVICE")
 public class BoardServiceImpl implements BoardService {
     private final BoardRepository boardRepository;
-    
+    private final ProjectRepository projectRepository;
     
     @Override
     @Transactional
     public BoardDTO createBoard(BoardRequest request){
+        Project project = projectRepository.findById(request.getProjectId())
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+        
         Board board = Board.builder()
+                .project(project)
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .build();
         
         boardRepository.save(board);
+        
         return null;
     }
     

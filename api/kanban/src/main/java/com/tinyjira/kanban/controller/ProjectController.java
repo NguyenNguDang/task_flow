@@ -8,11 +8,16 @@ import com.tinyjira.kanban.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Validated
 @RestController
@@ -22,6 +27,13 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "http://localhost:5173")
 public class ProjectController {
     private final ProjectService projectService;
+    
+    @GetMapping
+    public ResponseEntity<?> getAllProjects(@RequestParam(defaultValue = "0") int page,
+                                            @RequestParam(defaultValue = "10") int size){
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return ResponseEntity.ok(projectService.getAllProjects(pageable));
+    }
     
     @PostMapping
     public ResponseEntity<?> createProject(

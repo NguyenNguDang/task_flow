@@ -15,7 +15,8 @@ const getStyle = (style: any, snapshot: any) => {
 export default function Task({
                                  task,
                                  index,
-                             }: Readonly<{task: TaskCard; index: number; }>) {
+                                 onTaskClick
+                             }: Readonly<{task: TaskCard; index: number; onTaskClick?: (task: TaskCard) => void; }>) {
     if (!task) return null;
     const tagColor = Tags?.[task.tag?.toUpperCase() as keyof typeof Tags] ?? "bg-blue-300";
 
@@ -23,6 +24,7 @@ export default function Task({
         <Draggable draggableId={String(task.id)} index={index}>
             {(provided, snapshot) => (
                 <div
+                    onClick={() => onTaskClick?.(task)}
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
@@ -45,14 +47,12 @@ export default function Task({
                             </div>
                         </div>
                         <div className="flex flex-row items-center">
-                            {/* SỬA: Thêm kiểu dữ liệu cho tham số map để fix lỗi TS7006 */}
                             {task.assignees?.map((assignee, idx) => (
                                 <div
                                     key={idx}
-                                    title={assignee.name} // Hiện tên khi hover
+                                    title={assignee.name}
                                     className="size-6 rounded-full mr-[-5px] box-border bg-orange-300 bg-cover border-2 border-solid border-white flex items-center justify-center text-[10px] text-white font-bold uppercase"
                                 >
-                                    {/* Nếu có avatar thì hiện ảnh, không thì hiện chữ cái đầu */}
                                     {assignee.avatar ? (
                                         <img src={assignee.avatar} alt="" className="w-full h-full rounded-full"/>
                                     ) : (

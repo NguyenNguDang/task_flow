@@ -1,8 +1,9 @@
-import { createRoot } from "react-dom/client";
-import { RouterProvider } from "react-router-dom";
-import { router } from "./router";
+import {createRoot} from "react-dom/client";
+import {RouterProvider} from "react-router-dom";
+import {router} from "./router";
 import "./index.css";
-import { AuthProvider } from "./context/AuthContext";
+import {AuthProvider} from "./context/AuthContext";
+import {ProjectProvider} from "./context/ProjectContext.tsx";
 
 const originalWarn = console.warn;
 console.warn = (...args) => {
@@ -12,11 +13,13 @@ console.warn = (...args) => {
     ) {
         return;
     }
-    originalWarn(...args); 
+    originalWarn(...args);
 };
 
 createRoot(document.getElementById("root")!).render(
     <AuthProvider>
-        <RouterProvider router={router} />
+        <ProjectProvider>
+            <RouterProvider router={router}/>
+        </ProjectProvider>
     </AuthProvider>
 );

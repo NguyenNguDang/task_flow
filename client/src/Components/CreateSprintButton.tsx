@@ -3,7 +3,6 @@ import {SprintType} from "../types";
 
 interface CreateSprintButtonProps {
     boardId: number;
-    // Callback để báo cho component cha biết là đã tạo xong
     onSprintCreated: (newSprint: SprintType) => void;
 }
 
@@ -22,7 +21,6 @@ const CreateSprintButton: React.FC<CreateSprintButtonProps> = ({ boardId, onSpri
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // backend tư sinh data
                 body: JSON.stringify({})
             });
 

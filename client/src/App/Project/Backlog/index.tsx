@@ -8,17 +8,19 @@ import {BACKEND_URL} from "../../../Constants";
 import axios from "axios";
 import {toast} from "react-toastify";
 import MenuHeader from "../../../Components/MenuHeader";
+import axiosClient from "../../../api";
 
 export default function Backlog() {
     const [search, setSearch] = useState('');
     const [sprints, setSprints] = useState<SprintType[]>([]);
     const [allTasks, setAllTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
-
-    const { id } = useParams();
-
-    const numericBoardId = Number(id);
+    const { boardId, projectId } = useParams();
+    const numericBoardId = Number(boardId);
     const hasActiveSprint = sprints.some(s => s.status?.toLowerCase() === 'active');
+
+    console.log("BoardId", boardId);
+
     // --- FETCH DATA ---
     useEffect(() => {
         const fetchBoardData = async () => {
@@ -52,7 +54,7 @@ export default function Backlog() {
     };
 
     const getBacklogTasks = () => {
-        return allTasks.filter(t => !t.sprintId); // Cách viết ngắn gọn cho null/undefined
+        return allTasks.filter(t => !t.sprintId);
     };
 
     const renderPriority = (priority: string) => {
@@ -81,7 +83,6 @@ export default function Backlog() {
 
         try {
             await axios.patch(`${BACKEND_URL}/sprint/${sprintId}/start`)
-
             //Optimistic Update
             const updatedSprints = sprints.map(s => {
                 if (s.id === sprintId) {
@@ -129,6 +130,23 @@ export default function Backlog() {
         }
     };
 
+    //TODO: Not finish
+    const handleCreateSprint = async (sprintId: number, title: string) => {
+        try {
+            const payload = {
+                sprintId: sprintId,
+                title: title,
+                columnId: 1,
+                projectId: projectId,
+                boardId: 1
+            }
+            const newTask  = await axiosClient.post(`/tasks`, payload) as Task;
+            setAllTasks(prevTasks => [...prevTasks, newTask]);
+        }catch (error) {
+            toast("Failed to create task" + error);
+        }
+    }
+
     if (loading) return <div>Loading board...</div>;
 
     return (
@@ -172,6 +190,7 @@ export default function Backlog() {
                             isAnySprintActive={hasActiveSprint}
                             onStartSprint={handleStartSprint}
                             onCompleteSprint={handleCompleteSprint}
+                            onCreateTask={handleCreateSprint}
                         />
                     ))}
                 </div>

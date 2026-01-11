@@ -34,7 +34,7 @@ public class JwtServiceImpl implements JwtService {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
         
         Date issueTime = new Date();
-        Date expiredTime = Date.from(issueTime.toInstant().plus(30, ChronoUnit.MINUTES));
+        Date expiredTime = Date.from(issueTime.toInstant().plus(30, ChronoUnit.DAYS));
         
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                 .subject(user.getEmail())

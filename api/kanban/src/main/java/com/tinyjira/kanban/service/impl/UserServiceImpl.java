@@ -80,6 +80,7 @@ public class UserServiceImpl implements UserService {
         for (UpdateProfileCommand cmd : commands) {
             cmd.execute(currentUser);
         }
+        
         userRepository.save(currentUser);
     }
     

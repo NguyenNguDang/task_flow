@@ -31,12 +31,14 @@ export const Sidebar = () => {
         }
     }, [isOpen]);
 
+
+
     const fetchUserData = async () => {
         setIsLoading(true);
         try {
-            const user =  await axiosClient.get<User>('/user/me');
+            const user =  await axiosClient.get<User, User>('/user/me');
             setFormData({
-                fullName: user.fullName || "",
+                fullName: user.fullName  || "",
                 email: user.email || "",
                 phone: user.phone || "",
                 address: user.address || ""

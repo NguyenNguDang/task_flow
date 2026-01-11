@@ -7,6 +7,7 @@ import com.tinyjira.kanban.utils.ProjectStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -16,18 +17,21 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "tbl_project_member")
+@Table(name = "tbl_project")
 public class Project extends AbstractEntity<Long> {
     private String projectKey;
     private String name;
     private String description;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private LocalDateTime createdAt;
     private ProjectStatus projectStatus;
     
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectMember> members;
+    
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Board> boards;
     
     @ManyToOne
     @JoinColumn(name = "owner_id")
@@ -40,7 +44,7 @@ public class Project extends AbstractEntity<Long> {
                 .endDate(req.getEndDate())
                 .owner(owner)
                 .projectKey(generatedKey)
-                .startDate(LocalDateTime.now())
+                .startDate(LocalDate.now())
                 .createdAt(LocalDateTime.now())
                 .projectStatus(ProjectStatus.ACTIVE)
                 .build();
@@ -69,7 +73,7 @@ public class Project extends AbstractEntity<Long> {
             throw new DomainException("Chủ dự án không thể rời đi. Vui lòng chuyển quyền Owner trước!");
         }
         
-        boolean removed = this.members.removeIf(m -> m.getUser().equals(user));
+        boolean removed = this.members.removeIf(m -> m.getUser().getId().equals(user.getId()));
         
         if (!removed) {
             throw new DomainException("Người dùng này không phải là thành viên của dự án.");

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.AccessDeniedException;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -31,22 +32,17 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
         
-        if (!project.getOwner().equals(inviter)) {
-            throw new AccessDeniedException("Bạn không có quyền mời thành viên");
+        if (!Objects.equals(project.getOwner().getId(), inviter.getId())) {
+            throw new AccessDeniedException("You don't have permission to invite member!");
         }
         
-        // 3. Tìm User theo email
         User userToInvite = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User với email này chưa đăng ký hệ thống"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
         
-        // 4. RICH MODEL: Gọi hàm của Entity để thêm
         project.addMember(userToInvite, ProjectRole.MEMBER);
         
-        // 5. Save (Cascade sẽ tự lưu ProjectMember)
         projectRepository.save(project);
         
-        // 6. OBSERVER PATTERN: Bắn sự kiện "Đã mời thành công"
-        // Service xong việc tại đây, việc gửi mail là việc của người khác
         eventPublisher.publishEvent(new MemberInvitedEvent(
                 userToInvite.getEmail(),
                 project.getName(),

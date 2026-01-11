@@ -8,6 +8,8 @@ import lombok.Getter;
 @Getter
 public class BoardRequest {
     
+    private Long projectId;
+    
     @NotBlank(message = "Project Name must be not null")
     @Size(max = 255, message = "The project name cannot exceed 255 characters")
     private String title;

@@ -1,4 +1,5 @@
 import {useAuth} from "../../context/AuthContext.tsx";
+import {HTMLAttributes} from "react";
 
 interface TitleProps extends HTMLAttributes<HTMLDivElement> {
 }

@@ -13,6 +13,7 @@ export interface ColumnProps {
     column: ColumnType;
     index: number;
     onTaskCreated: (columnId: string, title: string) => Promise<void>;
+    onTaskClick: (task: TaskCard) => void;
 }
 
 const Title = ({ title }: { title: string }) => {
@@ -42,15 +43,15 @@ const TaskList = ({ provided, children, isDraggingOver }: any) => {
     );
 };
 
-const InnerTaskList = memo(({ tasks }: { tasks: TaskCard[] }) => {
+const InnerTaskList = memo(({ tasks, onTaskClick }: { tasks: TaskCard[], onTaskClick: (task: TaskCard) => void }) => {
     return tasks.map((task, index) => (
-        <Task key={task.id} task={task} index={index} />
+        <Task key={task.id} task={task} onTaskClick={onTaskClick} index={index} />
     ));
 });
 
 
 export default function Column(props: Readonly<ColumnProps>) {
-    const { tasks, column, onTaskCreated } = props;
+    const { tasks, column, onTaskCreated, onTaskClick } = props;
 
     return (
         <div className="w-[285px] min-w-[285px] ml-3 flex flex-col bg-[#f4f5f7] rounded-lg shadow-sm max-h-[calc(100vh-140px)]">
@@ -62,7 +63,7 @@ export default function Column(props: Readonly<ColumnProps>) {
                         provided={provided}
                         isDraggingOver={snapshot.isDraggingOver}
                     >
-                        <InnerTaskList tasks={tasks} />
+                        <InnerTaskList tasks={tasks} onTaskClick={onTaskClick}/>
                         {provided.placeholder}
                     </TaskList>
                 )}

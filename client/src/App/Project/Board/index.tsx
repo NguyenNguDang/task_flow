@@ -6,12 +6,13 @@ import {Column as ColumnType, CreateTaskRequest, Data, TaskCard} from "types";
 import axios from "axios";
 import { BACKEND_URL } from "Constants";
 import { convertToAppropriateFormat } from "utils";
-import {useOutletContext, useParams} from "react-router-dom";
+import {useLoaderData, useParams} from "react-router-dom";
 import {taskService} from "../../../services/task.service.tsx";
 import {toast} from "react-toastify";
 import {Button} from "../../../Components/Button.tsx";
 import AddColumnModal from "../../../Components/AddColumnModal.tsx";
 import MenuHeader from "../../../Components/MenuHeader";
+import {Modal} from "../../../Components/Modal.tsx";
 
 
 interface InnerListColumnProps {
@@ -19,6 +20,7 @@ interface InnerListColumnProps {
     column: ColumnType;
     taskMap: Record<string, TaskCard>;
     onTaskCreated: (columnId: string, title: string) => Promise<void>;
+    onTaskClick: (task: TaskCard) => void;
 }
 
 class TaskAndColumnOrderManager {
@@ -114,16 +116,18 @@ class TaskAndColumnOrderManager {
 }
 
 const InnerListColumn = memo((props: InnerListColumnProps) => {
-    const { index, column, taskMap, onTaskCreated } = props;
+    const { index, column, taskMap, onTaskCreated, onTaskClick } = props;
     const tasks = column.taskIds
         .map((taskId) => taskMap[taskId])
         .filter((task) => task !== undefined);
-    return <Column index={index} column={column} tasks={tasks} onTaskCreated={onTaskCreated} />;
+    return <Column onTaskClick={onTaskClick} index={index} column={column} tasks={tasks} onTaskCreated={onTaskCreated} />;
 });
+
+let boardId: number;
 
 export async function loadBoardData({ params }: any) {
     try {
-        const boardId = params.id;
+         boardId = params.boardId;
 
         console.log(`Fetching data for board: ${boardId} from ${BACKEND_URL}`);
 
@@ -168,15 +172,19 @@ export async function loadBoardData({ params }: any) {
 }
 
 export default function Board() {
-    const context = useOutletContext() as any;
-    const { boardData, activeSprint } = context;
+    const { boardData, activeSprint } = useLoaderData() as any;
     const [data, setData] = useState(boardData);
     const [isAddColumnModal, setIsAddColumnModal] = useState(false);
-    const { id: boardIdParam } = useParams();
+    const [selectedTask, setSelectedTask] = useState<TaskCard | null>(null);
+    const { projectId: projectIdParam, boardId: boardIdParam } = useParams();
 
     useEffect(() => {
         setData(boardData);
     }, [boardData]);
+
+    const handleTaskClick = (task: TaskCard) => {
+        setSelectedTask(task);
+    }
 
     const handleColumnAdded = ((newColumnBackend: any) => {
         const newColId = String(newColumnBackend.id);
@@ -202,10 +210,10 @@ export default function Board() {
         const payload: CreateTaskRequest = {
             title: title,
             columnId: Number(columnId),
-            projectId: Number(boardIdParam),
+            projectId: Number(projectIdParam),
             priority: 'medium',
             boardId: Number(boardIdParam),
-            sprintId: activeSprint.id
+            sprintId: activeSprint?.id || null
         };
 
         try {
@@ -216,7 +224,7 @@ export default function Board() {
 
             setData((prevData: any) => {
                 if (!prevData) return prevData;
-                
+
                 const newTaskId = String(newTask.id);
                 const colIdStr = String(columnId);
 
@@ -248,7 +256,7 @@ export default function Board() {
     }
 
 
-    if (!context || !context.boardData) {
+    if (!boardData) {
         return <div>Loading board data...</div>;
     }
 
@@ -314,18 +322,32 @@ export default function Board() {
                                     column={column}
                                     taskMap={data.tasks}
                                     onTaskCreated={handleCreateTask}
+                                    onTaskClick={handleTaskClick}
                                 />
                             );
                         })}
-                        <Button className="mx-4 py-10 px-4" onClick={() => setIsAddColumnModal(true)}>+Thêm column</Button>
+                        <Button icon={<span>+</span>} className="mx-4 py-10 px-4" onClick={() => setIsAddColumnModal(true)}>Create column</Button>
                     </div>
                     {isAddColumnModal && (
-                        <AddColumnModal boardId={1}
+                        <AddColumnModal boardId={boardId}
                                         onClose={() => setIsAddColumnModal(false)}
                                         onSuccess={handleColumnAdded}/>
                     )}
                 </div>
             </DragDropContext>
+
+            {selectedTask && (<Modal onClose={() => setSelectedTask(null)}>
+                <div className="mb-4">
+                    <h2 className="text-xl font-bold">Task Detail</h2>
+                </div>
+                <form action="" className={`flex flex-col items-start justify-center gap-2`}>
+
+                    <label htmlFor="">Title</label>
+                    <input type="text" name="title" id="" className={`w-full border border-gray-300 rounded-lg px-4 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}/>
+                    <label htmlFor="">Description</label>
+                    <input type="text" name="description" id="" className={`w-full border border-gray-300 rounded-lg px-4 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}/>
+                </form>
+            </Modal>)}
     </>
     );
 }

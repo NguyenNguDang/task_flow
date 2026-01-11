@@ -1,11 +1,11 @@
-import { useState } from "react";
+import {useState} from "react";
 
 interface Props {
     columnId: string;
     onTaskCreated: (columnId: string, title: string) => void;
 }
 
-export const CreateTaskButton = ({ columnId, onTaskCreated }: Props) => {
+export const CreateTaskButton = ({columnId, onTaskCreated}: Props) => {
     const [isOpen, setIsOpen] = useState(false);
     const [title, setTitle] = useState("");
 
