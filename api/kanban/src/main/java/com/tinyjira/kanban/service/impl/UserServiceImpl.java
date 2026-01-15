@@ -47,10 +47,17 @@ public class UserServiceImpl implements UserService {
     public void executeUpdates(User currentUser, UpdateProfileRequest request) {
         List<UpdateProfileCommand> commands = new ArrayList<>();
         
+        if (request.getFullName() != null) {
+            commands.add(new UpdateFullNameCommand(request.getFullName()));
+        }
+
         if (request.getPhone() != null) {
             commands.add(new UpdatePhoneCommand(request.getPhone()));
         }
         
+        if (request.getAddress() != null) {
+            commands.add(new UpdateAddressCommand(request.getAddress()));
+        }
         
         if (request.getBio() != null) {
             commands.add(new UpdateBioCommand(request.getBio()));
@@ -96,6 +103,7 @@ public class UserServiceImpl implements UserService {
                 .phone(user.getPhone())
                 .address(user.getAddress())
                 .avatarUrl(user.getAvatarUrl())
+                .bio(user.getBio())
                 .build();
     }
 }

@@ -19,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Validated
 @RestController
@@ -52,6 +53,21 @@ public class ProjectController {
     public ResponseEntity<List<UserSummaryResponse>> getProjectMembers(@PathVariable Long projectId) {
         List<UserSummaryResponse> members = projectService.getProjectMembers(projectId);
         return ResponseEntity.ok(members);
+    }
+
+    @PutMapping("/{projectId}")
+    public ResponseEntity<?> updateProject(
+            @PathVariable Long projectId,
+            @RequestBody Map<String, Object> updates
+    ) {
+        projectService.updateProject(projectId, updates);
+        return ResponseEntity.ok("Project updated successfully");
+    }
+
+    @DeleteMapping("/{projectId}")
+    public ResponseEntity<?> deleteProject(@PathVariable Long projectId) {
+        projectService.deleteProject(projectId);
+        return ResponseEntity.ok("Project deleted successfully");
     }
 
 }

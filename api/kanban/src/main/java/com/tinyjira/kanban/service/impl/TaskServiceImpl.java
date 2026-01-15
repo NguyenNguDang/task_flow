@@ -186,7 +186,52 @@ public class TaskServiceImpl implements TaskService {
                     task.setDescription((String) value);
                     break;
                 case "status":
-                    task.setStatus(TaskStatus.valueOf(((String) value).toUpperCase()));
+                    TaskStatus newStatus = TaskStatus.valueOf(((String) value).toUpperCase());
+                    task.setStatus(newStatus);
+                    
+                    // Logic tự động chuyển cột khi status thay đổi
+                    if (newStatus == TaskStatus.DONE) {
+                        // Tìm cột DONE trong board hiện tại
+                        Board board = task.getBoard();
+                        Optional<BoardColumn> doneColumn = board.getColumns().stream()
+                                .filter(col -> col.getTitle().equalsIgnoreCase("done"))
+                                .findFirst();
+                        
+                        if (doneColumn.isPresent()) {
+                            // Di chuyển task sang cột DONE
+                            // Cần tính toán position mới (cuối cột)
+                            Double maxPos = taskRepository.findMaxPositionByBoardColumnId(doneColumn.get().getId());
+                            double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
+                            
+                            task.setBoardColumn(doneColumn.get());
+                            task.setPosition(newPos);
+                        }
+                    } else if (newStatus == TaskStatus.TODO) {
+                         // Tìm cột TODO
+                        Board board = task.getBoard();
+                        Optional<BoardColumn> todoColumn = board.getColumns().stream()
+                                .filter(col -> col.getTitle().equalsIgnoreCase("to do") || col.getTitle().equalsIgnoreCase("todo"))
+                                .findFirst();
+                         if (todoColumn.isPresent()) {
+                            Double maxPos = taskRepository.findMaxPositionByBoardColumnId(todoColumn.get().getId());
+                            double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
+                            task.setBoardColumn(todoColumn.get());
+                            task.setPosition(newPos);
+                        }
+                    } else if (newStatus == TaskStatus.DOING) {
+                        // Tìm cột DOING / IN PROGRESS
+                        Board board = task.getBoard();
+                        Optional<BoardColumn> doingColumn = board.getColumns().stream()
+                                .filter(col -> col.getTitle().equalsIgnoreCase("doing") || col.getTitle().equalsIgnoreCase("in progress"))
+                                .findFirst();
+                        if (doingColumn.isPresent()) {
+                            Double maxPos = taskRepository.findMaxPositionByBoardColumnId(doingColumn.get().getId());
+                            double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
+                            task.setBoardColumn(doingColumn.get());
+                            task.setPosition(newPos);
+                        }
+                    }
+
                     break;
                 case "priority":
                     task.setPriority(Priority.valueOf(((String) value).toUpperCase()));
@@ -212,6 +257,33 @@ public class TaskServiceImpl implements TaskService {
             }
         });
 
+        taskRepository.save(task);
+    }
+
+    @Override
+    @Transactional
+    public void deleteTask(Long taskId) {
+        if (!taskRepository.existsById(taskId)) {
+            throw new ResourceNotFoundException("Task not found");
+        }
+        taskRepository.deleteById(taskId);
+    }
+
+    @Override
+    @Transactional
+    public void moveTaskToSprint(Long taskId, Long sprintId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        if (sprintId == null) {
+            // Move to backlog
+            task.setSprint(null);
+        } else {
+            Sprint sprint = sprintRepository.findById(sprintId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sprint not found"));
+            task.setSprint(sprint);
+        }
+        
         taskRepository.save(task);
     }
     

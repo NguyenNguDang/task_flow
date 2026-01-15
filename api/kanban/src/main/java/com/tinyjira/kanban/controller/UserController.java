@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -40,9 +41,9 @@ public class UserController {
                 .body(response);
     }
     
-    @PutMapping("/me")
+    @PutMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProfileUser(@AuthenticationPrincipal User currentUser,
-                                               @Valid @RequestBody UpdateProfileRequest req) {
+                                               @ModelAttribute UpdateProfileRequest req) {
         userService.executeUpdates(currentUser, req);
         return ResponseEntity.ok("Successfully updated profile");
     }

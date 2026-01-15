@@ -98,5 +98,21 @@ public class TaskController {
         taskService.updateTask(taskId, updates);
         return ResponseEntity.ok("Task updated successfully");
     }
+
+    @DeleteMapping("/{taskId}")
+    public ResponseEntity<?> deleteTask(@PathVariable Long taskId) {
+        taskService.deleteTask(taskId);
+        return ResponseEntity.ok("Task deleted successfully");
+    }
+
+    @PutMapping("/{taskId}/move-to-sprint")
+    public ResponseEntity<?> moveTaskToSprint(
+            @PathVariable Long taskId,
+            @RequestBody Map<String, Long> request
+    ) {
+        Long sprintId = request.get("sprintId");
+        taskService.moveTaskToSprint(taskId, sprintId);
+        return ResponseEntity.ok("Task moved to sprint successfully");
+    }
    
 }

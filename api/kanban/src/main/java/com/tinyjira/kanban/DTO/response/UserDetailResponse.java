@@ -12,4 +12,5 @@ public class UserDetailResponse {
     private String phone;
     private String address;
     private String avatarUrl;
+    private String bio;
 }

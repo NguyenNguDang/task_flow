@@ -17,6 +17,10 @@ export const taskService = {
         return axiosClient.put<Task>(`/tasks/${id}`, data);
     },
 
+    delete: (id: number) => {
+        return axiosClient.delete(`/tasks/${id}`);
+    },
+
     getAll: (boardId: string) => {
         return axiosClient.get<Task[]>(`/boards/${boardId}/tasks`);
     },
@@ -67,5 +71,9 @@ export const taskService = {
 
     updateStoryPoints: (taskId: number, storyPoints: number) => {
         return axiosClient.put(`/tasks/${taskId}`, { estimateHours: storyPoints });
+    },
+
+    moveTaskToSprint: (taskId: number, sprintId: number | null) => {
+        return axiosClient.put(`/tasks/${taskId}/move-to-sprint`, { sprintId });
     }
 };

@@ -28,5 +28,11 @@ public class BoardColumnController {
                 .status(HttpStatus.CREATED)
                 .body(boardColumnService.createColumn(boardId, request));
     }
+
+    @DeleteMapping("/{columnId}")
+    public ResponseEntity<?> deleteColumn(@PathVariable Long columnId) {
+        boardColumnService.deleteColumn(columnId);
+        return ResponseEntity.ok("Column deleted successfully");
+    }
     
 }

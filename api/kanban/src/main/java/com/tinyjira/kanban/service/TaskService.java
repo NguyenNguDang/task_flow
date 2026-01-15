@@ -26,4 +26,8 @@ public interface TaskService {
     TaskDetailResponse getTaskById(@Min(1) Long id);
 
     void updateTask(Long taskId, Map<String, Object> updates);
+
+    void deleteTask(Long taskId);
+
+    void moveTaskToSprint(Long taskId, Long sprintId);
 }

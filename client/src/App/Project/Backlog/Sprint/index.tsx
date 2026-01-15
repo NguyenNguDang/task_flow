@@ -8,6 +8,7 @@ import { HiUserCircle } from "react-icons/hi";
 import { CiCalendarDate } from "react-icons/ci";
 import SprintReportModal from "../../../../Components/SprintReportModal";
 import { Modal } from "../../../../Components/Modal";
+import { Droppable, Draggable } from "@hello-pangea/dnd";
 
 type ModalType = "EDIT" | "UPDATE" | null;
 
@@ -237,61 +238,79 @@ export const Sprint = ({
                 </div>
             </div>
             {/* --- BODY --- */}
-            <div className="border border-t-0 border-gray-200 rounded-b-md min-h-[50px] p-1 bg-white">
-                {tasks.map(task => (
-                    <TaskItem
-                        key={task.id}
-                        task={task}
-                        renderPriority={renderPriority}
-                    />
-                ))}
-
-                {tasks.length === 0 && (
-                    <div className="text-center text-gray-400 text-xs py-4 italic">
-                        No tasks in this sprint
-                    </div>
-                )}
-
-                {!isCreating ? (
-                    <div
-                        onClick={handleStartCreate}
-                        className="flex items-center gap-2 p-2 mx-1 mt-1 rounded cursor-pointer transition-colors hover:bg-gray-100 group"
+            <Droppable droppableId={String(sprintId)}>
+                {(provided) => (
+                    <div 
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="border border-t-0 border-gray-200 rounded-b-md min-h-[50px] p-1 bg-white"
                     >
-                        <span className="text-xl text-transparent group-hover:text-gray-500">+</span>
-                        <div className="text-sm text-transparent group-hover:text-gray-600 font-medium">
-                            Create issue
-                        </div>
-                    </div>
-                ) : (
-                    <div className="p-1 mx-1 mt-1">
-                        <div className="flex items-center gap-2 bg-white border-2 border-blue-600 rounded-md p-1.5 shadow-sm">
-                            <div className="w-4 h-4 bg-blue-400 rounded-sm flex items-center justify-center text-[10px] text-white font-bold">
-                                ✓
+                        {tasks.map((task, index) => (
+                            <Draggable key={task.id} draggableId={String(task.id)} index={index}>
+                                {(provided) => (
+                                    <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                    >
+                                        <TaskItem
+                                            task={task}
+                                            renderPriority={renderPriority}
+                                        />
+                                    </div>
+                                )}
+                            </Draggable>
+                        ))}
+                        {provided.placeholder}
+
+                        {tasks.length === 0 && (
+                            <div className="text-center text-gray-400 text-xs py-4 italic">
+                                No tasks in this sprint
                             </div>
-                            <input
-                                autoFocus
-                                type="text"
-                                className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400"
-                                placeholder="What needs to be done?"
-                                value={newTaskTitle}
-                                onChange={(e) => setNewTaskTitle(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                onBlur={() => {
-                                    if(!newTaskTitle) setIsCreating(false);
-                                }}
-                            />
-                            <div className="flex items-center gap-2 text-gray-400">
-                                <span className="hover:bg-gray-200 p-1 rounded cursor-pointer" title='Due date'><CiCalendarDate size={30} color={"black"}/></span>
-                                <span className="hover:bg-gray-200 p-1 rounded cursor-pointer" title="Assignee"><HiUserCircle size={30} /></span>
-                                <span> <Button icon={<MdSubdirectoryArrowLeft />}>Create</Button> </span>
+                        )}
+
+                        {!isCreating ? (
+                            <div
+                                onClick={handleStartCreate}
+                                className="flex items-center gap-2 p-2 mx-1 mt-1 rounded cursor-pointer transition-colors hover:bg-gray-100 group"
+                            >
+                                <span className="text-xl text-transparent group-hover:text-gray-500">+</span>
+                                <div className="text-sm text-transparent group-hover:text-gray-600 font-medium">
+                                    Create issue
+                                </div>
                             </div>
-                        </div>
-                        <div className="text-[11px] text-gray-500 mt-1 ml-1">
-                            Press <span className="font-bold">Enter</span> to create, <span className="font-bold">Esc</span> to cancel
-                        </div>
+                        ) : (
+                            <div className="p-1 mx-1 mt-1">
+                                <div className="flex items-center gap-2 bg-white border-2 border-blue-600 rounded-md p-1.5 shadow-sm">
+                                    <div className="w-4 h-4 bg-blue-400 rounded-sm flex items-center justify-center text-[10px] text-white font-bold">
+                                        ✓
+                                    </div>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400"
+                                        placeholder="What needs to be done?"
+                                        value={newTaskTitle}
+                                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        onBlur={() => {
+                                            if(!newTaskTitle) setIsCreating(false);
+                                        }}
+                                    />
+                                    <div className="flex items-center gap-2 text-gray-400">
+                                        <span className="hover:bg-gray-200 p-1 rounded cursor-pointer" title='Due date'><CiCalendarDate size={30} color={"black"}/></span>
+                                        <span className="hover:bg-gray-200 p-1 rounded cursor-pointer" title="Assignee"><HiUserCircle size={30} /></span>
+                                        <span> <Button icon={<MdSubdirectoryArrowLeft />}>Create</Button> </span>
+                                    </div>
+                                </div>
+                                <div className="text-[11px] text-gray-500 mt-1 ml-1">
+                                    Press <span className="font-bold">Enter</span> to create, <span className="font-bold">Esc</span> to cancel
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
-            </div>
+            </Droppable>
 
             {/* --- MODAL CONFIRM COMPLETE --- */}
             {isConfirmOpen && (

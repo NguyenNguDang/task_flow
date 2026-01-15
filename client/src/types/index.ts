@@ -96,6 +96,7 @@ export interface User {
     address?: string;
     avatarUrl?: string;
     roles?: string[];
+    bio?: string;
 }
 
 export interface Comment {

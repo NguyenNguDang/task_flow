@@ -2,12 +2,13 @@ import {Button} from "../Button.tsx";
 import {Kanban} from "../../App/Sidebar/Icons";
 import {useNavigate, useParams, useLocation} from "react-router-dom";
 import { AiOutlineEllipsis } from "react-icons/ai";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {Modal} from "../Modal.tsx";
 import { FaRegUser } from "react-icons/fa6";
 import { CiLogout } from "react-icons/ci";
 import axiosClient from "../../api";
 import {toast} from "react-toastify";
+import { MdDashboard } from "react-icons/md";
 
 type ModalType = "MENU" | "ADD_PEOPLE" | null;
 
@@ -16,10 +17,34 @@ const MenuHeader = () => {
     const location = useLocation();
     const params = useParams();
     const projectId = params.projectId;
-    const boardId = params.boardId;
+    const [boardId, setBoardId] = useState<string | undefined>(params.boardId);
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [projectName, setProjectName] = useState("MY SCUM PROJECT");
+
+    useEffect(() => {
+        const fetchProjectData = async () => {
+            if (projectId) {
+                try {
+                    const res = await axiosClient.get(`/projects`);
+                    const projects = (res as any).content || [];
+                    const currentProject = projects.find((p: any) => String(p.id) === projectId);
+
+                    if (currentProject) {
+                        setProjectName(currentProject.name);
+                        if (!boardId && currentProject.boards && currentProject.boards.length > 0) {
+                            setBoardId(currentProject.boards[0].id);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch project data", e);
+                }
+            }
+        };
+
+        fetchProjectData();
+    }, [projectId, boardId]);
 
     const handleNavigate = (path: string) => {
         if (projectId) {
@@ -74,15 +99,26 @@ const MenuHeader = () => {
     return (
         <div className="mx-4 pt-4 pl-4 border-b border-gray-300">
             <div>
-                <p className={`flex justify-start items-center gap-4 font-bold`}>MY SCUM PROJECT <span onClick={() => {openModal("MENU")}} className={`rounded cursor-pointer hover:bg-gray-100`}><AiOutlineEllipsis size={40} /></span></p>
+                <p className={`flex justify-start items-center gap-4 font-bold uppercase`}>{projectName} <span onClick={() => {openModal("MENU")}} className={`rounded cursor-pointer hover:bg-gray-100`}><AiOutlineEllipsis size={40} /></span></p>
             </div>
             <div className="flex justify-start items-center gap-3 py-4">
                 <div>
                     <Button
+                        icon={<MdDashboard />}
+                        active={location.pathname.includes('dashboard')}
+                        onClick={() => handleNavigate(`dashboard`)}
+                        className="w-full mb-2 justify-start"
+                    >
+                        Overview
+                    </Button>
+                </div>
+                <div>
+                    <Button
                         icon={<Kanban />}
                         active={location.pathname.includes('backlog')}
-                        onClick={() => handleNavigate(`backlog/${boardId}`)}
-                        className="w-full mb-2 justify-start"
+                        onClick={() => boardId && handleNavigate(`backlog/${boardId}`)}
+                        className={`w-full mb-2 justify-start ${!boardId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!boardId}
                     >
                         Backlog
                     </Button>
@@ -91,8 +127,9 @@ const MenuHeader = () => {
                     <Button
                         icon={<Kanban />}
                         active={location.pathname.includes('board')}
-                        onClick={() => handleNavigate(`board/${boardId}`)}
-                        className="w-full mb-2 justify-start"
+                        onClick={() => boardId && handleNavigate(`board/${boardId}`)}
+                        className={`w-full mb-2 justify-start ${!boardId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!boardId}
                     >
                         Board
                     </Button>

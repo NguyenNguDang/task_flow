@@ -6,8 +6,9 @@ import {useParams} from "react-router-dom";
 import { taskService } from "../../../services/task.service";
 import TaskComments from './TaskComments';
 import { Comment } from '../../../types';
-import { FaTrash, FaUserCircle } from 'react-icons/fa';
+import { FaTrash, FaUserCircle, FaCheck } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
+import { toast } from 'react-toastify';
 
 interface TaskDetailType {
     title: string;
@@ -69,6 +70,12 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
     const assigneeButtonRef = useRef<HTMLDivElement>(null);
     const assigneeMenuRef = useRef<HTMLDivElement>(null);
 
+    // Task Options Menu State
+    const [showTaskMenu, setShowTaskMenu] = useState(false);
+    const [taskMenuPosition, setTaskMenuPosition] = useState({ top: 0, left: 0 });
+    const taskMenuButtonRef = useRef<HTMLButtonElement>(null);
+    const taskMenuRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         const fetchUsers = async () => {
             try {
@@ -120,6 +127,18 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // Handle click outside for task menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (taskMenuRef.current && !taskMenuRef.current.contains(event.target as Node) &&
+                taskMenuButtonRef.current && !taskMenuButtonRef.current.contains(event.target as Node)) {
+                setShowTaskMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const handleUpdateTask = async (field: string, value: any) => {
         // Optimistic update
         setTaskDetail(prev => prev ? { ...prev, [field]: value } : null);
@@ -155,6 +174,17 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                 left: rect.left + window.scrollX
             });
             setShowAssigneeMenu(!showAssigneeMenu);
+        }
+    };
+
+    const handleTaskMenuClick = () => {
+        if (taskMenuButtonRef.current) {
+            const rect = taskMenuButtonRef.current.getBoundingClientRect();
+            setTaskMenuPosition({
+                top: rect.bottom + window.scrollY + 5,
+                left: rect.left + window.scrollX
+            });
+            setShowTaskMenu(!showTaskMenu);
         }
     };
 
@@ -256,24 +286,100 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
         }
     };
 
+    const handleDeleteTask = async () => {
+        if (!window.confirm("Are you sure you want to delete this task? This action cannot be undone.")) return;
+
+        try {
+            await taskService.delete(taskId);
+            toast.success("Task deleted successfully");
+            onClose(); // Close modal
+            onTaskUpdate?.(); // Refresh board
+        } catch (error) {
+            console.error("Failed to delete task", error);
+            toast.error("Failed to delete task");
+        }
+    };
+
     const calculateProgress = () => {
         if (!taskDetail?.subtasks || taskDetail.subtasks.length === 0) return 0;
         const completedCount = taskDetail.subtasks.filter(s => s.completed).length;
         return Math.round((completedCount / taskDetail.subtasks.length) * 100);
     };
 
+    const handleMarkAsDone = async () => {
+        if (!taskDetail) return;
+        
+        // Optimistic update
+        setTaskDetail(prev => prev ? { ...prev, status: 'DONE' } : null);
+        
+        try {
+            // Update status to DONE
+            await taskService.update(String(taskId), { status: 'DONE' });
+            
+            // We also need to move the task to the "Done" column visually and logically
+            // However, the backend might handle moving to the correct column based on status change
+            // or we might need to find the "Done" column ID and call updatePosition.
+            // For now, let's rely on onTaskUpdate to refresh the board which should reflect the change.
+            // But to be safe and consistent with drag-drop logic, we might need to know the Done column ID.
+            // Since we don't have column info here easily, we rely on the parent component (Board) to refresh.
+            
+            // Trigger parent update
+            onTaskUpdate?.();
+            
+            // Close modal maybe? Or keep it open to show it's done.
+            // Let's keep it open but show it as done.
+            
+        } catch (error) {
+            console.error("Failed to mark as done", error);
+            // Revert
+            setTaskDetail(prev => prev ? { ...prev, status: taskDetail.status } : null);
+        }
+    };
+
     if (loading) return <Modal onClose={onClose}><div>Loading...</div></Modal>;
 
     if (!taskDetail) return <Modal onClose={onClose}><div>Không tìm thấy dữ liệu task! (Vui lòng check console)</div></Modal>;
+    
+    const isDone = taskDetail.status === 'DONE';
+
     return (
         <Modal onClose={onClose}>
             <div className="grid grid-cols-3 gap-4"> {/* Tăng gap cho thoáng */}
 
                 {/* --- CỘT TRÁI (Nội dung chính) --- */}
                 <div className="col-span-2 space-y-4">
+                    
+                    {/* Header with Mark as Done */}
+                    <div className="flex items-center gap-3 mb-2">
+                        <button 
+                            onClick={handleMarkAsDone}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                                isDone 
+                                ? 'bg-green-100 text-green-700 cursor-default' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                            disabled={isDone}
+                        >
+                            {isDone ? (
+                                <>
+                                    <FaCheck size={12} />
+                                    <span>Done</span>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-gray-500 rounded-sm"></div>
+                                    <span>Mark as Done</span>
+                                </>
+                            )}
+                        </button>
+                        
+                        {/* Breadcrumbs or ID could go here */}
+                        <span className="text-xs text-gray-500">#{taskId}</span>
+                    </div>
+
                     {/* Title */}
                     <input
-                        className="text-2xl font-bold w-full border-none focus:ring-0"
+                        className={`text-2xl font-bold w-full border-none focus:ring-0 ${isDone ? 'line-through text-gray-500' : ''}`}
                         defaultValue={taskDetail.title}
                         type="text"
                         onBlur={(e) => handleUpdateTask('title', e.target.value)}
@@ -281,7 +387,12 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
 
                     <div className="flex gap-2">
                         <button><CiSquarePlus size={30} color="gray" /></button>
-                        <button><CiSquareMore size={30} color="gray" /></button>
+                        <button 
+                            ref={taskMenuButtonRef}
+                            onClick={handleTaskMenuClick}
+                        >
+                            <CiSquareMore size={30} color="gray" />
+                        </button>
                     </div>
 
                     {/* Description */}
@@ -403,6 +514,12 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                 <div>
                     <h3 className="font-bold text-gray-500 text-xs uppercase mb-3">Details</h3>
                     <div className="grid grid-cols-[100px_1fr] gap-y-3 text-sm">
+                        
+                        {/* Status */}
+                        <div className="text-gray-500">Status</div>
+                        <div className="uppercase font-semibold text-xs px-2 py-1 bg-gray-100 rounded w-fit">
+                            {taskDetail.status}
+                        </div>
 
                         {/* Assignee */}
                         <div className="text-gray-500">Assignee</div>
@@ -516,6 +633,31 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                             <span className="truncate">{user.fullName}</span>
                         </div>
                     ))}
+                </div>,
+                document.body
+            )}
+
+            {/* Task Options Menu Portal */}
+            {showTaskMenu && createPortal(
+                <div 
+                    ref={taskMenuRef}
+                    style={{ 
+                        top: taskMenuPosition.top, 
+                        left: taskMenuPosition.left,
+                        position: 'absolute',
+                        zIndex: 9999 
+                    }}
+                    className="bg-white shadow-xl rounded-md border border-gray-200 w-40 py-1 animate-in fade-in zoom-in duration-200"
+                >
+                    <button 
+                        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        onClick={() => {
+                            setShowTaskMenu(false);
+                            handleDeleteTask();
+                        }}
+                    >
+                        <FaTrash size={12} /> Delete Task
+                    </button>
                 </div>,
                 document.body
             )}

@@ -5,6 +5,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class UpdateProfileRequest {
+    private String fullName;
     private String address;
     private String phone;
     private String bio;

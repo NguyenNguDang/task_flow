@@ -3,6 +3,7 @@ package com.tinyjira.kanban.service.impl;
 import com.tinyjira.kanban.DTO.request.CreateProjectRequest;
 import com.tinyjira.kanban.DTO.response.ProjectDetailResponse;
 import com.tinyjira.kanban.DTO.response.UserSummaryResponse;
+import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.Project;
 import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.repository.ProjectRepository;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -62,5 +64,36 @@ public class ProjectServiceImpl implements ProjectService {
         return users.stream()
                 .map(UserSummaryResponse::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void updateProject(Long projectId, Map<String, Object> updates) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        updates.forEach((key, value) -> {
+            switch (key) {
+                case "name":
+                    project.setName((String) value);
+                    break;
+                case "description":
+                    project.setDescription((String) value);
+                    break;
+                default:
+                    log.warn("Unknown field to update: {}", key);
+            }
+        });
+
+        projectRepository.save(project);
+    }
+
+    @Override
+    @Transactional
+    public void deleteProject(Long projectId) {
+        if (!projectRepository.existsById(projectId)) {
+            throw new ResourceNotFoundException("Project not found");
+        }
+        projectRepository.deleteById(projectId);
     }
 }

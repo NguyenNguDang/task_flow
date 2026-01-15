@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -38,6 +39,9 @@ public class Sprint extends AbstractEntity<Long>{
     @JoinColumn(name = "board_id", referencedColumnName = "id")
     @JsonIgnore
     private Board board;
+
+    @OneToMany(mappedBy = "sprint", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SprintHistory> history = new ArrayList<>();
     
     //Complete sprint
     public void complete(){

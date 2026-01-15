@@ -35,6 +35,9 @@ public class Board extends AbstractEntity<Long> {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
     private Project project;
+
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Sprint> sprints = new HashSet<>();
     
     public Board(String title, String description) {
         super();

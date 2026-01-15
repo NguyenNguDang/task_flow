@@ -1,5 +1,4 @@
 import {Outlet, useLoaderData, useLocation} from "react-router-dom";
-import Navbar from "./Navbar";
 import {Sidebar} from "./Sidebar";
 import {CreateIssue} from "Components/CreateIssue";
 import {ToastContainer} from "react-toastify";
@@ -14,7 +13,6 @@ export default function App() {
     return (
         <div className="flex flex-row h-full w-full">
             <Holder/>
-            <Navbar></Navbar>
             <Sidebar></Sidebar>
             <Outlet context={data}/>
             <ToastContainer

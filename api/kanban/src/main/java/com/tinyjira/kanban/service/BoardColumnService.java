@@ -9,4 +9,5 @@ import java.util.List;
 public interface BoardColumnService {
     List<ColumnDetailResponse> getColumnsByBoardId(Long boardId);
     ColumnDetailResponse createColumn(Long boardId, @Valid ColumnRequest request);
+    void deleteColumn(Long columnId);
 }

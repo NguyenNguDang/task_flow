@@ -12,10 +12,11 @@ import Item from "./Item.tsx";
 import {Modal} from "../../Components/Modal.tsx";
 import {useEffect, useState} from "react";
 import {User} from "../../types";
-import {useNavigate, useParams} from "react-router-dom";
+import {Link, useNavigate, useParams} from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { userService } from "../../services/user.service.tsx";
 import { toast } from "react-toastify";
+import {FaList} from "react-icons/fa";
 
 interface ProfileFormInputs {
     fullName: string;
@@ -45,14 +46,14 @@ export const Sidebar = () => {
     const fetchUserData = async () => {
         setIsLoading(true);
         try {
-            const user = await userService.getMe();
+            const user = await userService.getMe() ;
             setCurrentUser(user);
             setValue("fullName", user.fullName || "");
             setValue("email", user.email || "");
             setValue("phone", user.phone || "");
             setValue("address", user.address || "");
             // Assuming user object has bio field, if not, it will be ignored or need to update User type
-            setValue("bio", (user as any).bio || "");
+            setValue("bio", user.bio || "");
         } catch (error) {
             console.error("Lỗi lấy thông tin user:", error);
             toast.error("Failed to load user data");
@@ -87,9 +88,12 @@ export const Sidebar = () => {
 
     return (
         <div
-            className="ml-16 border-r font-CircularStdBold text-sm border-r-solid leading-[1.2] border-r-[#dfe1e6] bg-[#f4f5f7] min-w-[230px] w-[230px] flex flex-col items-center h-full px-4">
+            className="border-r font-CircularStdBold text-sm border-r-solid leading-[1.2] border-r-[#dfe1e6] bg-[#f4f5f7] min-w-[230px] w-[230px] flex flex-col items-center h-full px-4">
             <Title className="cursor-pointer" onClick={() => setIsOpen(true)}/>
             <Item/>
+            <Link to="/projects" className="w-full">
+                <Button icon={<FaList />} className="w-full justify-start mb-2">All Projects</Button>
+            </Link>
             <Button icon={<Settings/>}>Project Settings</Button>
             <div className="h-10 w-full flex flex-col justify-center">
                 <div className="bg-[#c1c7d0] h-[1px] w-full"></div>

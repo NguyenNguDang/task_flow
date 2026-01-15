@@ -352,6 +352,35 @@ export default function Board() {
                     newColumnId: destination.droppableId,
                     newIndex: destination.index
                 });
+
+                if (source.droppableId !== destination.droppableId) {
+                    const destinationColumn = data.columns[destination.droppableId];
+                    const columnTitle = destinationColumn.title.toLowerCase();
+                    let newStatus: 'todo' | 'doing' | 'done' | undefined;
+
+                    if (columnTitle === 'done') {
+                        newStatus = 'done';
+                    } else if (columnTitle === 'in progress' || columnTitle === 'doing') {
+                        newStatus = 'doing';
+                    } else if (columnTitle === 'to do' || columnTitle === 'todo') {
+                        newStatus = 'todo';
+                    }
+
+                    if (newStatus) {
+                        await taskService.update(draggableId, {status: newStatus});
+
+                        setData((prevData: any) => ({
+                            ...prevData,
+                            tasks: {
+                                ...prevData.tasks,
+                                [draggableId]: {
+                                    ...prevData.tasks[draggableId],
+                                    status: newStatus
+                                }
+                            }
+                        }));
+                    }
+                }
             }
 
             if (type === "column") {

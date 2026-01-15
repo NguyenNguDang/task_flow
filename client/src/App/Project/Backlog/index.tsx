@@ -9,6 +9,8 @@ import axios from "axios";
 import {toast} from "react-toastify";
 import MenuHeader from "../../../Components/MenuHeader";
 import axiosClient from "../../../api";
+import { DragDropContext, DropResult } from "@hello-pangea/dnd";
+import { taskService } from "../../../services/task.service";
 
 export default function Backlog() {
     const [search, setSearch] = useState('');
@@ -126,19 +128,6 @@ export default function Backlog() {
                 priority: 'medium'
             }
             const response = await axiosClient.post(`/tasks`, payload);
-            const newTask = response as Task; // Assuming response is the task object
-            
-            // Backend might return different structure, let's ensure we map it correctly if needed
-            // But based on TaskController, it returns TaskDetailResponse inside "data" field of map
-            // Wait, TaskController returns: { message: "...", data: response }
-            // axiosClient interceptor might return response.data directly.
-            // Let's assume axiosClient returns the data object directly.
-            
-            // If axiosClient returns { message, data: task }, then newTask should be response.data
-            // Let's check axiosClient implementation or assume standard response.
-            // Based on previous code, it seems axiosClient returns response.data.
-            
-            // However, TaskController returns a Map. So response.data is the TaskDetailResponse.
             const createdTask = (response as any).data; 
 
             setAllTasks(prevTasks => [...prevTasks, createdTask]);
@@ -175,6 +164,41 @@ export default function Backlog() {
         }
     };
 
+    const onDragEnd = async (result: DropResult) => {
+        const { destination, source, draggableId } = result;
+
+        if (!destination) return;
+
+        if (
+            destination.droppableId === source.droppableId &&
+            destination.index === source.index
+        ) {
+            return;
+        }
+
+        const taskId = Number(draggableId);
+        const sourceSprintId = source.droppableId === 'backlog' ? null : Number(source.droppableId);
+        const destSprintId = destination.droppableId === 'backlog' ? null : Number(destination.droppableId);
+
+        // Optimistic update
+        const updatedTasks = allTasks.map(t => {
+            if (t.id === taskId) {
+                return { ...t, sprintId: destSprintId };
+            }
+            return t;
+        });
+        setAllTasks(updatedTasks);
+
+        try {
+            await taskService.moveTaskToSprint(taskId, destSprintId);
+        } catch (error) {
+            console.error("Failed to move task", error);
+            toast.error("Failed to move task");
+            // Revert on error
+            setAllTasks(allTasks);
+        }
+    };
+
     if (loading) return <div>Loading board...</div>;
 
     return (
@@ -204,37 +228,39 @@ export default function Backlog() {
                     <CreateSprintButton boardId={numericBoardId} onSprintCreated={handleSprintCreated} />
                 </div>
 
-                {/* --- LIST SPRINTS --- */}
-                <div className="flex flex-col gap-6">
-                    {sprints.map((sprint) => (
-                        <Sprint
-                            key={sprint.id}
-                            sprintId={sprint.id}
-                            allSprints={sprints}
-                            title={sprint.name}
-                            tasks={getTasksForSprint(sprint.id)}
-                            renderPriority={renderPriority}
-                            status={sprint.status}
-                            startDate={sprint.startDate}
-                            endDate={sprint.endDate}
-                            isAnySprintActive={hasActiveSprint}
-                            onStartSprint={handleStartSprint}
-                            onCompleteSprint={handleCompleteSprint}
-                            onCreateTask={(title) => handleCreateTask(sprint.id, title)}
-                            onDeleteSprint={handleDeleteSprint}
-                            onUpdateSprint={handleUpdateSprint}
-                        />
-                    ))}
-                </div>
+                <DragDropContext onDragEnd={onDragEnd}>
+                    {/* --- LIST SPRINTS --- */}
+                    <div className="flex flex-col gap-6">
+                        {sprints.map((sprint) => (
+                            <Sprint
+                                key={sprint.id}
+                                sprintId={sprint.id}
+                                allSprints={sprints}
+                                title={sprint.name}
+                                tasks={getTasksForSprint(sprint.id)}
+                                renderPriority={renderPriority}
+                                status={sprint.status}
+                                startDate={sprint.startDate}
+                                endDate={sprint.endDate}
+                                isAnySprintActive={hasActiveSprint}
+                                onStartSprint={handleStartSprint}
+                                onCompleteSprint={handleCompleteSprint}
+                                onCreateTask={(title) => handleCreateTask(sprint.id, title)}
+                                onDeleteSprint={handleDeleteSprint}
+                                onUpdateSprint={handleUpdateSprint}
+                            />
+                        ))}
+                    </div>
 
-                {/* --- BACKLOG SECTION --- */}
-                <div className="mt-8">
-                    <BacklogSection
-                        tasks={getBacklogTasks()}
-                        renderPriority={renderPriority}
-                        onCreateTask={(title) => handleCreateTask(null, title)}
-                    />
-                </div>
+                    {/* --- BACKLOG SECTION --- */}
+                    <div className="mt-8">
+                        <BacklogSection
+                            tasks={getBacklogTasks()}
+                            renderPriority={renderPriority}
+                            onCreateTask={(title) => handleCreateTask(null, title)}
+                        />
+                    </div>
+                </DragDropContext>
             </div>
         </div>
 

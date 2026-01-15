@@ -79,7 +79,12 @@ public class SprintServiceImpl implements SprintService {
     @Override
     public void completeSprint(Long sprintId, Long targetSprintId) {
         Sprint sprint = getSprintById(sprintId);
-        Sprint targetSprint = getSprintById(targetSprintId);
+        
+        // targetSprintId có thể null nếu người dùng chọn chuyển về Backlog
+        Sprint targetSprint = null;
+        if (targetSprintId != null) {
+            targetSprint = getSprintById(targetSprintId);
+        }
         
         List<Task> allTasksInSprint = taskRepository.findBySprintId(sprintId);
         sprint.complete();

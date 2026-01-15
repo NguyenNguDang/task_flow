@@ -42,6 +42,14 @@ public class BoardColumnServiceImpl implements BoardColumnService {
         
         return toDto(boardColumn);
     }
+
+    @Override
+    public void deleteColumn(Long columnId) {
+        if (!boardColumnRepository.existsById(columnId)) {
+            throw new ResourceAccessException("Column not found");
+        }
+        boardColumnRepository.deleteById(columnId);
+    }
     
     private ColumnDetailResponse toDto(BoardColumn boardColumn) {
         return ColumnDetailResponse.builder()
