@@ -32,4 +32,10 @@ public class SubtaskController {
         subtaskService.toggleSubtaskStatus(taskId, subtaskId);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{subtaskId}")
+    public ResponseEntity<Void> deleteSubtask(@PathVariable Long taskId, @PathVariable Long subtaskId) {
+        subtaskService.deleteSubtask(taskId, subtaskId);
+        return ResponseEntity.noContent().build();
+    }
 }

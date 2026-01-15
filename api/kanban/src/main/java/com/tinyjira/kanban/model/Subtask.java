@@ -9,7 +9,7 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "tbl_board")
+@Table(name = "tbl_subtask")
 public class Subtask extends AbstractEntity<Long>{
     @Column(nullable = false)
     private String title;

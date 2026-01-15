@@ -116,6 +116,19 @@ public class SprintServiceImpl implements SprintService {
                 .mvpUser(ProjectDetailResponse.UserSummaryDto.fromEntity(mvp))
                 .build();
     }
+
+    @Override
+    public void deleteSprint(Long id) {
+        Sprint sprint = getSprintById(id);
+        // Logic: Move tasks to backlog before deleting? Or delete tasks?
+        // Usually, tasks should be moved to backlog.
+        List<Task> tasks = taskRepository.findBySprintId(id);
+        for (Task task : tasks) {
+            task.setSprint(null); // Move to backlog
+            taskRepository.save(task);
+        }
+        sprintRepository.delete(sprint);
+    }
     
     private Sprint getSprintById(Long id) {
         return sprintRepository.findById(id)

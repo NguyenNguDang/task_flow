@@ -19,8 +19,6 @@ export default function Backlog() {
     const numericBoardId = Number(boardId);
     const hasActiveSprint = sprints.some(s => s.status?.toLowerCase() === 'active');
 
-    console.log("BoardId", boardId);
-
     // --- FETCH DATA ---
     useEffect(() => {
         const fetchBoardData = async () => {
@@ -33,8 +31,6 @@ export default function Backlog() {
                 if (sprintsRes.ok && tasksRes.ok) {
                     const sprintsData = await sprintsRes.json();
                     const tasksData = await tasksRes.json();
-                    // console.log("Sprint Data", sprintsData);
-                    // console.log("TasksData", tasksData);
                     setSprints(sprintsData);
                     setAllTasks(tasksData);
                 }
@@ -45,7 +41,9 @@ export default function Backlog() {
             }
         };
 
-        fetchBoardData();
+        if (numericBoardId) {
+            fetchBoardData();
+        }
     }, [numericBoardId]);
 
 
@@ -64,26 +62,20 @@ export default function Backlog() {
             medium: 'text-yellow-500',
             low: 'text-blue-400'
         };
-        // Fallback về medium nếu priority null
         const colorClass = colors[priority?.toLowerCase()] || 'text-yellow-500';
         return <span className={`text-xs font-bold uppercase ${colorClass}`}>↑</span>;
     };
 
-    // Hàm callback cập nhật UI khi tạo Sprint mới
     const handleSprintCreated = (newSprint: SprintType) => {
         setSprints([...sprints, newSprint]);
     };
 
     const handleStartSprint = async (sprintId: number) => {
-        console.log("Start sprint:", sprintId);
         const currentSprint= sprints.find(s => s.id === sprintId);
-        if(!currentSprint){
-            return;
-        }
+        if(!currentSprint) return;
 
         try {
             await axios.patch(`${BACKEND_URL}/sprint/${sprintId}/start`)
-            //Optimistic Update
             const updatedSprints = sprints.map(s => {
                 if (s.id === sprintId) {
                     return { ...s, status: "active" };
@@ -100,10 +92,8 @@ export default function Backlog() {
     };
 
     const handleCompleteSprint = async (sprintId: number, targetSprintId: number|null) => {
-        console.log("Complete sprint:", sprintId);
-        // Call API complete sprint
         try {
-            const res = await  axios.patch(`${BACKEND_URL}/sprint/${sprintId}/complete`, {},
+            const res = await axios.patch(`${BACKEND_URL}/sprint/${sprintId}/complete`, {},
                 {
                     params: {
                         targetSprintId: targetSprintId
@@ -111,12 +101,7 @@ export default function Backlog() {
                 });
             if (res.status === 204) {
                 toast.success("Hoàn thành Sprint thành công!");
-
-                // TODO: Cập nhật state của React ở đây để UI thay đổi ngay lập tức
-                // 1. Xóa Sprint vừa xong khỏi UI
                 setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
-
-                // 2. Cập nhật Task chưa xong
                 setAllTasks(prevTasks => prevTasks.map(task => {
                     if (task.sprintId === sprintId && task.status !== 'done') {
                         return { ...task, sprintId: targetSprintId ?? null };
@@ -130,22 +115,65 @@ export default function Backlog() {
         }
     };
 
-    //TODO: Not finish
-    const handleCreateSprint = async (sprintId: number, title: string) => {
+    const handleCreateTask = async (sprintId: number | null, title: string) => {
         try {
             const payload = {
                 sprintId: sprintId,
                 title: title,
-                columnId: 1,
-                projectId: projectId,
-                boardId: 1
+                columnId: 1, // Default to first column (TODO) - Backend should handle this better or fetch columns first
+                projectId: Number(projectId),
+                boardId: numericBoardId,
+                priority: 'medium'
             }
-            const newTask  = await axiosClient.post(`/tasks`, payload) as Task;
-            setAllTasks(prevTasks => [...prevTasks, newTask]);
+            const response = await axiosClient.post(`/tasks`, payload);
+            const newTask = response as Task; // Assuming response is the task object
+            
+            // Backend might return different structure, let's ensure we map it correctly if needed
+            // But based on TaskController, it returns TaskDetailResponse inside "data" field of map
+            // Wait, TaskController returns: { message: "...", data: response }
+            // axiosClient interceptor might return response.data directly.
+            // Let's assume axiosClient returns the data object directly.
+            
+            // If axiosClient returns { message, data: task }, then newTask should be response.data
+            // Let's check axiosClient implementation or assume standard response.
+            // Based on previous code, it seems axiosClient returns response.data.
+            
+            // However, TaskController returns a Map. So response.data is the TaskDetailResponse.
+            const createdTask = (response as any).data; 
+
+            setAllTasks(prevTasks => [...prevTasks, createdTask]);
+            toast.success("Task created successfully");
         }catch (error) {
-            toast("Failed to create task" + error);
+            console.error("Failed to create task:", error);
+            toast.error("Failed to create task");
         }
     }
+
+    const handleDeleteSprint = async (sprintId: number) => {
+        if (!window.confirm("Are you sure you want to delete this sprint?")) return;
+        
+        try {
+            await axiosClient.delete(`/sprint/${sprintId}`);
+            setSprints(prev => prev.filter(s => s.id !== sprintId));
+            // Move tasks to backlog in UI
+            setAllTasks(prev => prev.map(t => t.sprintId === sprintId ? { ...t, sprintId: null } : t));
+            toast.success("Sprint deleted");
+        } catch (error) {
+            console.error("Failed to delete sprint", error);
+            toast.error("Failed to delete sprint");
+        }
+    };
+
+    const handleUpdateSprint = async (sprintId: number, data: Partial<SprintType>) => {
+        try {
+            await axiosClient.put(`/sprint/${sprintId}`, data);
+            setSprints(prev => prev.map(s => s.id === sprintId ? { ...s, ...data } : s));
+            toast.success("Sprint updated");
+        } catch (error) {
+            console.error("Failed to update sprint", error);
+            toast.error("Failed to update sprint");
+        }
+    };
 
     if (loading) return <div>Loading board...</div>;
 
@@ -187,10 +215,14 @@ export default function Backlog() {
                             tasks={getTasksForSprint(sprint.id)}
                             renderPriority={renderPriority}
                             status={sprint.status}
+                            startDate={sprint.startDate}
+                            endDate={sprint.endDate}
                             isAnySprintActive={hasActiveSprint}
                             onStartSprint={handleStartSprint}
                             onCompleteSprint={handleCompleteSprint}
-                            onCreateTask={handleCreateSprint}
+                            onCreateTask={(title) => handleCreateTask(sprint.id, title)}
+                            onDeleteSprint={handleDeleteSprint}
+                            onUpdateSprint={handleUpdateSprint}
                         />
                     ))}
                 </div>
@@ -200,6 +232,7 @@ export default function Backlog() {
                     <BacklogSection
                         tasks={getBacklogTasks()}
                         renderPriority={renderPriority}
+                        onCreateTask={(title) => handleCreateTask(null, title)}
                     />
                 </div>
             </div>

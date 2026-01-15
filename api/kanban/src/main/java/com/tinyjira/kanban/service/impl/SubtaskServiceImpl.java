@@ -46,4 +46,14 @@ public class SubtaskServiceImpl implements SubtaskService {
         
         taskRepository.save(task);
     }
+
+    @Override
+    @Transactional
+    public void deleteSubtask(Long taskId, Long subtaskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        task.removeSubtask(subtaskId);
+        taskRepository.save(task);
+    }
 }

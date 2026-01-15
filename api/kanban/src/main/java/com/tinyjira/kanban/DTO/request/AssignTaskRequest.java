@@ -1,0 +1,8 @@
+package com.tinyjira.kanban.DTO.request;
+
+import lombok.Data;
+
+@Data
+public class AssignTaskRequest {
+    private Long assigneeId;
+}

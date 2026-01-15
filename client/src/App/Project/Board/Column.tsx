@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Droppable } from "@hello-pangea/dnd";
-import {Column as ColumnType, TaskCard} from "types";
+import {Column as ColumnType, TaskCard, User} from "types";
 import Task from "./Task";
 import { memo } from "react";
 import { DragIndicator } from "./DragIndicator";
 import {CreateTaskButton} from "../../../Components/CreateTaskButton.tsx";
+import { IoIosMore } from "react-icons/io";
 
 
 export interface ColumnProps {
@@ -14,6 +15,7 @@ export interface ColumnProps {
     index: number;
     onTaskCreated: (columnId: string, title: string) => Promise<void>;
     onTaskClick: (task: TaskCard) => void;
+    onAssignUser: (taskId: string, user: User) => void;
 }
 
 const Title = ({ title }: { title: string }) => {
@@ -43,19 +45,33 @@ const TaskList = ({ provided, children, isDraggingOver }: any) => {
     );
 };
 
-const InnerTaskList = memo(({ tasks, onTaskClick }: { tasks: TaskCard[], onTaskClick: (task: TaskCard) => void }) => {
+const InnerTaskList = memo(({ tasks, onTaskClick, onAssignUser, isDoneColumn }: { tasks: TaskCard[], onTaskClick: (task: TaskCard) => void, onAssignUser: (taskId: string, user: User) => void, isDoneColumn: boolean }) => {
     return tasks.map((task, index) => (
-        <Task key={task.id} task={task} onTaskClick={onTaskClick} index={index} />
+        <Task 
+            key={task.id} 
+            task={task} 
+            onTaskClick={onTaskClick} 
+            index={index} 
+            onAssignUser={onAssignUser} 
+            isDoneColumn={isDoneColumn}
+        />
     ));
 });
 
 
 export default function Column(props: Readonly<ColumnProps>) {
-    const { tasks, column, onTaskCreated, onTaskClick } = props;
+    const { tasks, column, onTaskCreated, onTaskClick, onAssignUser } = props;
+    
+    // Check if this is the DONE column
+    const isDoneColumn = column.title.toUpperCase() === 'DONE';
 
     return (
         <div className="w-[285px] min-w-[285px] ml-3 flex flex-col bg-[#f4f5f7] rounded-lg shadow-sm max-h-[calc(100vh-140px)]">
-            <Title title={column.title} />
+            <div className={"flex justify-between items-center"}>
+                <Title title={column.title} />
+                <button className={"pr-2"}><IoIosMore size={20}/></button>
+            </div>
+
 
             <Droppable ignoreContainerClipping={true} type="task" droppableId={column.id}>
                 {(provided, snapshot) => (
@@ -63,7 +79,12 @@ export default function Column(props: Readonly<ColumnProps>) {
                         provided={provided}
                         isDraggingOver={snapshot.isDraggingOver}
                     >
-                        <InnerTaskList tasks={tasks} onTaskClick={onTaskClick}/>
+                        <InnerTaskList 
+                            tasks={tasks} 
+                            onTaskClick={onTaskClick} 
+                            onAssignUser={onAssignUser}
+                            isDoneColumn={isDoneColumn}
+                        />
                         {provided.placeholder}
                     </TaskList>
                 )}

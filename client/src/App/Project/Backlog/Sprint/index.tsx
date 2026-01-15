@@ -6,8 +6,10 @@ import {Button} from "../../../../Components/Button.tsx";
 import { MdSubdirectoryArrowLeft } from "react-icons/md";
 import { HiUserCircle } from "react-icons/hi";
 import { CiCalendarDate } from "react-icons/ci";
+import SprintReportModal from "../../../../Components/SprintReportModal";
+import { Modal } from "../../../../Components/Modal";
 
-type ModalType = "EDIT" | null;
+type ModalType = "EDIT" | "UPDATE" | null;
 
 type SprintProps = {
     title: string;
@@ -16,10 +18,14 @@ type SprintProps = {
     allSprints: SprintType[];
     renderPriority: (priority: string) => React.ReactNode;
     status: string;
+    startDate?: string;
+    endDate?: string;
     isAnySprintActive: boolean;
     onStartSprint?: (id: number) => void;
     onCompleteSprint?: (id: number, targetId: number | null) => void;
-    onCreateTask: (sprintId: number, title: string) => void;
+    onCreateTask: (title: string) => void;
+    onDeleteSprint?: (id: number) => void;
+    onUpdateSprint?: (id: number, data: Partial<SprintType>) => void;
 };
 
 export const Sprint = ({
@@ -29,10 +35,14 @@ export const Sprint = ({
                            allSprints,
                            renderPriority,
                            status,
+                           startDate,
+                           endDate,
                            isAnySprintActive,
                            onStartSprint,
                            onCompleteSprint,
-                           onCreateTask
+                           onCreateTask,
+                           onDeleteSprint,
+                           onUpdateSprint
                        }: SprintProps) => {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [targetSprintInfo, setTargetSprintInfo] = useState<{ id: number | null, name: string }>({
@@ -44,6 +54,10 @@ export const Sprint = ({
     const [isOpen, setIsOpen] = useState<ModalType>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState("");
+    const [showReport, setShowReport] = useState(false);
+    
+    // Edit Sprint State
+    const [editData, setEditData] = useState({ name: title, startDate: startDate || '', endDate: endDate || '' });
 
     const handleStartCreate = () => {
         setIsCreating(true);
@@ -60,7 +74,7 @@ export const Sprint = ({
             return;
         }
 
-        onCreateTask(sprintId, newTaskTitle);
+        onCreateTask(newTaskTitle);
         setNewTaskTitle("");
     };
 
@@ -74,6 +88,9 @@ export const Sprint = ({
 
     const openModal = (type: ModalType) => {
         setIsOpen(type);
+        if (type === "UPDATE") {
+            setEditData({ name: title, startDate: startDate || '', endDate: endDate || '' });
+        }
     }
 
     const closeModal = () => {
@@ -114,9 +131,16 @@ export const Sprint = ({
         setIsConfirmOpen(false);
     };
 
+    const handleUpdateSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (onUpdateSprint) {
+            onUpdateSprint(sprintId, editData);
+        }
+        closeModal();
+    };
+
     const renderActionButton = () => {
         if (isCurrentSprintActive) {
-            // Case 1: Sprint is Active -> Can be Complete
             return (
                 <button
                     onClick={handleCompleteClick}
@@ -125,8 +149,7 @@ export const Sprint = ({
                     Complete sprint
                 </button>
             );
-        } else {
-            // Case 2: Sprint is not Active
+        } else if (status !== 'completed') {
             return (
                 <button
                     onClick={() => {
@@ -134,7 +157,7 @@ export const Sprint = ({
                             onStartSprint(sprintId);
                         }
                     }}
-                    disabled={isAnySprintActive} // Disable nếu có sprint khác đang active
+                    disabled={isAnySprintActive}
                     className={`px-3 py-1 rounded font-medium transition-colors text-xs
                         ${isAnySprintActive
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -147,43 +170,63 @@ export const Sprint = ({
                 </button>
             );
         }
+        return null;
     };
 
     return (
         <div className="mb-8">
             {/* --- HEADER --- */}
             <div className="flex justify-between items-center bg-[#f4f5f7] px-4 py-3 rounded-t-md text-sm">
-                <div className="font-bold text-[#42526e]">
-                    {title}
-                    <span className="font-normal text-gray-500 ml-2">
-                        ({tasks.length} tasks)
-                    </span>
+                <div className="flex flex-col">
+                    <div className="font-bold text-[#42526e] flex items-center gap-2">
+                        {title}
+                        <span className="font-normal text-gray-500 text-xs">
+                            ({tasks.length} tasks)
+                        </span>
+                    </div>
+                    {(startDate || endDate) && (
+                        <div className="text-xs text-gray-500 mt-1">
+                            {startDate} - {endDate}
+                        </div>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     {renderActionButton()}
                     <div className="relative inline-block">
-    <span
-        onClick={() => openModal("EDIT")}
-        className="cursor-pointer hover:bg-gray-200 rounded p-1 block"
-    >
-        <IoIosMore size={20}/>
-    </span>
+                        <span
+                            onClick={() => openModal("EDIT")}
+                            className="cursor-pointer hover:bg-gray-200 rounded p-1 block"
+                        >
+                            <IoIosMore size={20}/>
+                        </span>
 
                         {isOpen === "EDIT" && (
                             <>
-                                {/* 1. Backdrop ảo: Để click ra ngoài thì đóng menu */}
-                                <div
-                                    className="fixed inset-0 z-40"
-                                    onClick={closeModal}
-                                ></div>
-
-                                {/* 2. Menu Dropdown: Dùng div thường thay vì Modal */}
+                                <div className="fixed inset-0 z-40" onClick={closeModal}></div>
                                 <div className="absolute right-0 top-full mt-1 w-40 bg-white shadow-xl rounded-md border border-gray-200 z-50 overflow-hidden">
                                     <div className="py-1">
-                                        <button  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <button 
+                                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                            onClick={() => openModal("UPDATE")}
+                                        >
                                             Edit Sprint
                                         </button>
-                                        <button className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                                        <button 
+                                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                            onClick={() => {
+                                                closeModal();
+                                                setShowReport(true);
+                                            }}
+                                        >
+                                            View Report
+                                        </button>
+                                        <button 
+                                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                                            onClick={() => {
+                                                closeModal();
+                                                if (onDeleteSprint) onDeleteSprint(sprintId);
+                                            }}
+                                        >
                                             Delete Sprint
                                         </button>
                                     </div>
@@ -195,7 +238,6 @@ export const Sprint = ({
             </div>
             {/* --- BODY --- */}
             <div className="border border-t-0 border-gray-200 rounded-b-md min-h-[50px] p-1 bg-white">
-                {/* 1. Render danh sách Task */}
                 {tasks.map(task => (
                     <TaskItem
                         key={task.id}
@@ -204,14 +246,12 @@ export const Sprint = ({
                     />
                 ))}
 
-                {/* 2. Hiển thị khi Sprint rỗng (Optional - giúp UI đẹp hơn) */}
                 {tasks.length === 0 && (
                     <div className="text-center text-gray-400 text-xs py-4 italic">
                         No tasks in this sprint
                     </div>
                 )}
 
-                {/* 3. Drop Zone / Create Task Input */}
                 {!isCreating ? (
                     <div
                         onClick={handleStartCreate}
@@ -225,12 +265,9 @@ export const Sprint = ({
                 ) : (
                     <div className="p-1 mx-1 mt-1">
                         <div className="flex items-center gap-2 bg-white border-2 border-blue-600 rounded-md p-1.5 shadow-sm">
-                            {/* Icon loại task (giả lập) */}
                             <div className="w-4 h-4 bg-blue-400 rounded-sm flex items-center justify-center text-[10px] text-white font-bold">
                                 ✓
                             </div>
-
-                            {/* Input nhập tên task */}
                             <input
                                 autoFocus
                                 type="text"
@@ -256,41 +293,79 @@ export const Sprint = ({
                 )}
             </div>
 
-            {/* --- MODAL CONFIRM --- */}
+            {/* --- MODAL CONFIRM COMPLETE --- */}
             {isConfirmOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
                     <div className="bg-white rounded-md shadow-lg w-[400px] p-6 animate-fade-in">
                         <h3 className="text-lg font-bold text-gray-800 mb-4">Complete Sprint: {title}</h3>
-
                         <div className="text-sm text-gray-600 mb-6 space-y-3">
                             <p>
-                                Sprint này còn <span
-                                className="font-bold text-red-600">{unfinishedTasksCount}</span> task chưa hoàn
-                                thành.
+                                Sprint này còn <span className="font-bold text-red-600">{unfinishedTasksCount}</span> task chưa hoàn thành.
                             </p>
                             <div className="bg-blue-50 p-3 rounded border border-blue-100 text-blue-800">
-                                <p className="mb-1 text-xs uppercase font-bold text-blue-600">Hệ thống sẽ tự động
-                                    chuyển đến:</p>
+                                <p className="mb-1 text-xs uppercase font-bold text-blue-600">Hệ thống sẽ tự động chuyển đến:</p>
                                 <p className="font-medium text-lg">👉 {targetSprintInfo.name}</p>
                             </div>
                         </div>
-
                         <div className="flex justify-end gap-2">
-                            <button
-                                onClick={() => setIsConfirmOpen(false)}
-                                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleConfirmComplete}
-                                className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded font-medium transition-colors"
-                            >
-                                Confirm Complete
-                            </button>
+                            <button onClick={() => setIsConfirmOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors">Cancel</button>
+                            <button onClick={handleConfirmComplete} className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded font-medium transition-colors">Confirm Complete</button>
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* --- MODAL EDIT SPRINT --- */}
+            {isOpen === "UPDATE" && (
+                <Modal onClose={closeModal} className="max-w-md">
+                    <div className="p-2">
+                        <h3 className="text-lg font-bold mb-4">Edit Sprint: {title}</h3>
+                        <form onSubmit={handleUpdateSubmit} className="flex flex-col gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Sprint Name</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editData.name}
+                                    onChange={(e) => setEditData({...editData, name: e.target.value})}
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                    <input 
+                                        type="date" 
+                                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={editData.startDate}
+                                        onChange={(e) => setEditData({...editData, startDate: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                    <input 
+                                        type="date" 
+                                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={editData.endDate}
+                                        onChange={(e) => setEditData({...editData, endDate: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2 mt-2">
+                                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
+                                <button type="submit" className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded">Update</button>
+                            </div>
+                        </form>
+                    </div>
+                </Modal>
+            )}
+
+            {/* --- SPRINT REPORT MODAL --- */}
+            {showReport && (
+                <SprintReportModal
+                    sprintId={sprintId}
+                    onClose={() => setShowReport(false)}
+                />
             )}
         </div>
     );

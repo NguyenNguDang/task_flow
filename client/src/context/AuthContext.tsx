@@ -1,7 +1,6 @@
 import{ createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import {User} from "../types/auth.types.ts";
-
-
+import { logoutService } from "../services/auth.service";
 
 interface AuthContextType {
     user: User | null;
@@ -44,11 +43,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('user', JSON.stringify(userData));
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('user');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+    const logout = async () => {
+        try {
+            await logoutService();
+        } catch (error) {
+            console.error("Logout API failed", error);
+        } finally {
+            setUser(null);
+            localStorage.removeItem('user');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+        }
     };
 
     if (isInitializing) {

@@ -25,5 +25,7 @@ public interface SprintService {
     void startSprint(@Min(1) Long id);
     
     SprintReportResponse getSprintReport(Long sprintId);
+
+    void deleteSprint(Long id);
     
 }

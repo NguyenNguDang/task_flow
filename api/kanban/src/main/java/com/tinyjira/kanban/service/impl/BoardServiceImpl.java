@@ -8,6 +8,7 @@ import com.tinyjira.kanban.model.Board;
 import com.tinyjira.kanban.model.BoardColumn;
 import com.tinyjira.kanban.model.Project;
 import com.tinyjira.kanban.model.Task;
+import com.tinyjira.kanban.repository.BoardColumnRepository;
 import com.tinyjira.kanban.repository.BoardRepository;
 import com.tinyjira.kanban.repository.ProjectRepository;
 import com.tinyjira.kanban.service.BoardService;
@@ -26,6 +27,7 @@ import java.util.List;
 public class BoardServiceImpl implements BoardService {
     private final BoardRepository boardRepository;
     private final ProjectRepository projectRepository;
+    private final BoardColumnRepository boardColumnRepository;
     
     @Override
     @Transactional
@@ -39,9 +41,17 @@ public class BoardServiceImpl implements BoardService {
                 .description(request.getDescription())
                 .build();
         
-        boardRepository.save(board);
+        Board savedBoard = boardRepository.save(board);
+
+        // Create default columns
+        List<BoardColumn> defaultColumns = new ArrayList<>();
+        defaultColumns.add(new BoardColumn("TODO", 0, savedBoard));
+        defaultColumns.add(new BoardColumn("DOING", 1, savedBoard));
+        defaultColumns.add(new BoardColumn("DONE", 2, savedBoard));
+
+        boardColumnRepository.saveAll(defaultColumns);
         
-        return null;
+        return toDTO(savedBoard);
     }
     
     @Override
@@ -107,6 +117,7 @@ public class BoardServiceImpl implements BoardService {
     
     private BoardDTO toDTO(Board board) {
         return BoardDTO.builder()
+                .id(board.getId())
                 .title(board.getTitle())
                 .description(board.getDescription())
                 .build();

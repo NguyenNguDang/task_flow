@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -24,18 +25,20 @@ public class ProjectDetailResponse {
     private List<BoardDTO> boards;
    
     public static ProjectDetailResponse fromEntity(Project project) {
-        List<BoardDTO> boardDTOs = project .getBoards().stream().map(board -> BoardDTO.builder()
-                .id(board.getId())
-                .title(board.getTitle())
-                .description(board.getDescription())
-                .build()).toList();
+        List<BoardDTO> boardDTOs = project.getBoards() != null 
+                ? project.getBoards().stream().map(board -> BoardDTO.builder()
+                    .id(board.getId())
+                    .title(board.getTitle())
+                    .description(board.getDescription())
+                    .build()).toList()
+                : Collections.emptyList();
         
         return ProjectDetailResponse.builder()
                 .id(project.getId())
                 .projectKey(project.getProjectKey())
                 .name(project.getName())
                 .description(project.getDescription())
-                .status(project.getProjectStatus().name())
+                .status(project.getProjectStatus() != null ? project.getProjectStatus().name() : "UNKNOWN")
                 .endDate(project.getEndDate())
                 .createdAt(project.getCreatedAt())
                 // Convert Owner Entity -> Owner DTO

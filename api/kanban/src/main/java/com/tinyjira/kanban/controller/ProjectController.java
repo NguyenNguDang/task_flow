@@ -2,6 +2,7 @@ package com.tinyjira.kanban.controller;
 
 import com.tinyjira.kanban.DTO.request.CreateProjectRequest;
 import com.tinyjira.kanban.DTO.response.ProjectDetailResponse;
+import com.tinyjira.kanban.DTO.response.UserSummaryResponse;
 import com.tinyjira.kanban.model.Project;
 import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.service.ProjectService;
@@ -22,7 +23,7 @@ import java.util.List;
 @Validated
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/v1/projects")
+@RequestMapping("/api/v1/projects")
 @Slf4j(topic = "PROJECT-CONTROLLER")
 @CrossOrigin(origins = "http://localhost:5173")
 public class ProjectController {
@@ -45,6 +46,12 @@ public class ProjectController {
         ProjectDetailResponse response = ProjectDetailResponse.fromEntity(project);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{projectId}/members")
+    public ResponseEntity<List<UserSummaryResponse>> getProjectMembers(@PathVariable Long projectId) {
+        List<UserSummaryResponse> members = projectService.getProjectMembers(projectId);
+        return ResponseEntity.ok(members);
     }
 
 }

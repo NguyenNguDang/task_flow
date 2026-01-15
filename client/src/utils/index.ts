@@ -8,6 +8,9 @@ export const getHeaderTitle = (pathname: string): string => {
     if (pathname.includes("board")) {
         return 'Board';
     }
+    if (pathname.includes("dashboard")) {
+        return 'Dashboard';
+    }
     return "Header Title";
 }
 
@@ -41,15 +44,30 @@ export function convertToAppropriateFormat(data: any) {
         const taskIdStr = String(task.id);
         const columnIdStr = String(task.boardColumnId);
 
+        // Logic map assignee: Ưu tiên lấy từ object assignee (cấu trúc mới), fallback về assigneeName (cấu trúc cũ nếu có)
+        let assignees: { name: string; avatar?: string }[] = [];
+        
+        if (task.assignee) {
+            // Kiểm tra kỹ các trường có thể có trong assignee object
+            const name = task.assignee.fullName || task.assignee.name || task.assignee.username || "Unknown";
+            assignees = [{
+                name: name,
+                avatar: task.assignee.avatarUrl
+            }];
+        } else if (task.assigneeName) {
+            assignees = [{
+                name: task.assigneeName,
+                avatar: task.assigneeAvatar
+            }];
+        }
+
         board.tasks[taskIdStr] = {
             id: taskIdStr,
             title: task.title,
             description: task.description,
-            assignees: task.assigneeName ? [{
-                name: task.assigneeName,
-                avatar: task.assigneeAvatar
-            }] : [],
+            assignees: assignees,
             tag: task.priority,
+            status: task.status, // Map status field
             position: task.position !== undefined ? task.position : 0 // Lưu position để sort
         };
 

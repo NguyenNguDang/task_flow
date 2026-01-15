@@ -1,6 +1,7 @@
 package com.tinyjira.kanban.controller;
 
 import com.tinyjira.kanban.DTO.CommentDto;
+import com.tinyjira.kanban.DTO.request.AssignTaskRequest;
 import com.tinyjira.kanban.DTO.request.CreateCommentRequest;
 import com.tinyjira.kanban.DTO.request.MoveTaskRequest;
 import com.tinyjira.kanban.DTO.request.TaskRequest;
@@ -20,6 +21,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.AccessDeniedException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,13 @@ import java.util.Map;
 public class TaskController {
     private final TaskService taskService;
     private final CommentService commentService;
+    
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getTask(@PathVariable @Min(1) Long id) {
+        TaskDetailResponse response = taskService.getTaskById(id);
+        return ResponseEntity.ok(response);
+    }
+    
     
     @GetMapping("/{boardId}/active-sprint")
     public ResponseEntity<?> getTasksInActiveSprint(@PathVariable Long boardId) {
@@ -68,15 +77,26 @@ public class TaskController {
         return ResponseEntity.ok("Task moved successfully");
     }
     
-    @PostMapping("/{taskId}/comments")
-    public ResponseEntity<?> addComment(
+    @PutMapping("/{taskId}/assign")
+    public ResponseEntity<?> assignTask(
             @PathVariable Long taskId,
-            @AuthenticationPrincipal User currentUser,
-            @ModelAttribute CreateCommentRequest request
+            @RequestBody AssignTaskRequest request,
+            @AuthenticationPrincipal User currentUser
     ) {
-        CommentDto newComment = commentService.addComment(taskId, currentUser, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(newComment);
+        try {
+            taskService.assignTask(taskId, request.getAssigneeId(), currentUser);
+            return ResponseEntity.ok("Task assigned successfully");
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
-    
+
+    @PutMapping("/{taskId}")
+    public ResponseEntity<?> updateTask(@PathVariable Long taskId, @RequestBody Map<String, Object> updates) {
+        taskService.updateTask(taskId, updates);
+        return ResponseEntity.ok("Task updated successfully");
+    }
    
 }

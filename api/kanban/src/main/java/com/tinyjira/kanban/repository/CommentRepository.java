@@ -4,5 +4,8 @@ import org.springframework.data.repository.CrudRepository;
 
 import com.tinyjira.kanban.model.Comment;
 
-public interface CommentRepository extends CrudRepository<Comment, String> {
+import java.util.List;
+
+public interface CommentRepository extends CrudRepository<Comment, Long> {
+    List<Comment> findByTaskIdOrderByCreatedOnDesc(Long taskId);
 }

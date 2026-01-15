@@ -6,6 +6,7 @@ import Home from "./App/Home";
 import Login from "./App/Login";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Register from "./App/Register";
+import ProjectDashboard from "./App/Project/Dashboard";
 
 export const router = createBrowserRouter([
     {
@@ -37,8 +38,12 @@ export const router = createBrowserRouter([
                         element: <Backlog />
                     },
                     {
+                        path: "dashboard",
+                        element: <ProjectDashboard />
+                    },
+                    {
                         index: true,
-                        element: <Navigate to="backlog" replace />
+                        element: <Navigate to="dashboard" replace />
                     }
                 ]
             }

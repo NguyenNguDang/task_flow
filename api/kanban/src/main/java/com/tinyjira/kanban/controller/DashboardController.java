@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/projects/{projectId}/dashboard")
+@RequestMapping("api/v1/projects/{projectId}/dashboard")
 @Slf4j(topic = "SUBTASK-CONTROLLER")
 @CrossOrigin(origins = "http://localhost:5173")
 public class DashboardController {

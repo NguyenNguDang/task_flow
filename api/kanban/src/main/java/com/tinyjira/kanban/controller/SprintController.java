@@ -90,5 +90,11 @@ public class SprintController {
         log.info("Started Sprint with id {}", id);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteSprint(@PathVariable Long id) {
+        sprintService.deleteSprint(id);
+        return ResponseEntity.noContent().build();
+    }
     
 }

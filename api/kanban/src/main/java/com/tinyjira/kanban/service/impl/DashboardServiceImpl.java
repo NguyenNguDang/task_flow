@@ -23,6 +23,7 @@ public class DashboardServiceImpl implements DashboardService {
         Long totalTasks = rawData.stream().mapToLong(TaskStatusCount::getCount).sum();
         
         List<ProjectDashboardResponse.ChartItem> chartItems = rawData.stream()
+                .filter(item -> item.getStatus() != null) // Lọc bỏ các item có status null
                 .map(item -> new ProjectDashboardResponse.ChartItem(
                         item.getStatus().name(),
                         item.getCount(),
@@ -38,6 +39,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
     
     private String getColorForStatus(TaskStatus status) {
+        if (status == null) return "#42526E";
         return switch (status) {
             case DONE -> "#36B37E"; //Green
             case DOING -> "#0052CC"; //Blue

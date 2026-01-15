@@ -3,11 +3,13 @@ package com.tinyjira.kanban.DTO.request;
 import com.tinyjira.kanban.utils.Priority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 
 @Getter
+@Setter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TaskRequest {
     @NotBlank(message = "Title must be not blank!")
     private String title;
@@ -25,6 +27,6 @@ public class TaskRequest {
     @NotNull(message = "Board Id must be not null!")
     private Long boardId;
     
-    @NotNull(message = "Sprint Id must be not null!")
+    // Allow null for backlog tasks
     private Long sprintId;
 }

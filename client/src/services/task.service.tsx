@@ -1,5 +1,5 @@
 import axiosClient from "../api";
-import {CreateTaskRequest, Task} from "../types";
+import {CreateTaskRequest, Task, Comment} from "../types";
 
 interface MoveTaskPayload {
     taskId: string;
@@ -29,5 +29,43 @@ export const taskService = {
     updateColumnOrder: (newOrder: string[]) => {
         const url = '/boards/reorder-columns';
         return axiosClient.put(url, { columnOrder: newOrder });
+    },
+
+    assignUser: (taskId: number, userId: number) => {
+        return axiosClient.put(`/tasks/${taskId}/assign`, { assigneeId: userId });
+    },
+
+    createSubtask: (taskId: number, title: string) => {
+        return axiosClient.post(`/tasks/${taskId}/subtasks`, { title });
+    },
+
+    toggleSubtask: (taskId: number, subtaskId: number) => {
+        return axiosClient.patch(`/tasks/${taskId}/subtasks/${subtaskId}/toggle`);
+    },
+
+    deleteSubtask: (taskId: number, subtaskId: number) => {
+        return axiosClient.delete(`/tasks/${taskId}/subtasks/${subtaskId}`);
+    },
+
+    getComments: (taskId: number) => {
+        return axiosClient.get<Comment[]>(`/tasks/${taskId}/comments`);
+    },
+
+    addComment: (taskId: number, content: string) => {
+        return axiosClient.post<Comment>(`/tasks/${taskId}/comments`, { content });
+    },
+
+    uploadAttachment: (taskId: number, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return axiosClient.post(`/tasks/${taskId}/attachments`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+
+    updateStoryPoints: (taskId: number, storyPoints: number) => {
+        return axiosClient.put(`/tasks/${taskId}`, { estimateHours: storyPoints });
     }
 };

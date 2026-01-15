@@ -1,6 +1,6 @@
 import {Button} from "../Button.tsx";
 import {Kanban} from "../../App/Sidebar/Icons";
-import {useNavigate, useParams} from "react-router-dom";
+import {useNavigate, useParams, useLocation} from "react-router-dom";
 import { AiOutlineEllipsis } from "react-icons/ai";
 import {useState} from "react";
 import {Modal} from "../Modal.tsx";
@@ -13,6 +13,7 @@ type ModalType = "MENU" | "ADD_PEOPLE" | null;
 
 const MenuHeader = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const params = useParams();
     const projectId = params.projectId;
     const boardId = params.boardId;

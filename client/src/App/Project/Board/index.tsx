@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {memo, useEffect, useState} from "react";
 import Column from "./Column";
-import { DragDropContext, DropResult } from "@hello-pangea/dnd";
-import {Column as ColumnType, CreateTaskRequest, Data, TaskCard} from "types";
+import {DragDropContext, DropResult} from "@hello-pangea/dnd";
+import {Column as ColumnType, CreateTaskRequest, Data, TaskCard, User} from "types";
 import axios from "axios";
-import { BACKEND_URL } from "Constants";
-import { convertToAppropriateFormat } from "utils";
+import {BACKEND_URL} from "Constants";
+import {convertToAppropriateFormat} from "utils";
 import {useLoaderData, useParams} from "react-router-dom";
 import {taskService} from "../../../services/task.service.tsx";
 import {toast} from "react-toastify";
 import {Button} from "../../../Components/Button.tsx";
 import AddColumnModal from "../../../Components/AddColumnModal.tsx";
 import MenuHeader from "../../../Components/MenuHeader";
-import {Modal} from "../../../Components/Modal.tsx";
+import TaskDetailModal from "./TaskDetailModal.tsx";
 
 
 interface InnerListColumnProps {
@@ -21,6 +21,7 @@ interface InnerListColumnProps {
     taskMap: Record<string, TaskCard>;
     onTaskCreated: (columnId: string, title: string) => Promise<void>;
     onTaskClick: (task: TaskCard) => void;
+    onAssignUser: (taskId: string, user: User) => void;
 }
 
 class TaskAndColumnOrderManager {
@@ -34,8 +35,8 @@ class TaskAndColumnOrderManager {
     private type;
 
     constructor(result: DropResult, setData: (...args: any) => void, data: Data) {
-        const { type, source, destination, draggableId } = result;
-        const { columns } = data;
+        const {type, source, destination, draggableId} = result;
+        const {columns} = data;
 
         this.setState = setData;
         this.destination = destination!;
@@ -62,7 +63,7 @@ class TaskAndColumnOrderManager {
         const newTaskIds = [...this.start.taskIds];
         newTaskIds.splice(this.source.index, 1);
         newTaskIds.splice(this.destination.index, 0, this.draggableId);
-        const newColumn = { ...this.start, taskIds: newTaskIds };
+        const newColumn = {...this.start, taskIds: newTaskIds};
         const newState = {
             ...this.data,
             columns: {
@@ -101,7 +102,8 @@ class TaskAndColumnOrderManager {
             (this.destination.droppableId === this.source.droppableId &&
                 this.destination.index === this.source.index)
         )
-            return () => {};
+            return () => {
+            };
 
         if (this.type == "column") {
             return this.dragColumns;
@@ -116,18 +118,19 @@ class TaskAndColumnOrderManager {
 }
 
 const InnerListColumn = memo((props: InnerListColumnProps) => {
-    const { index, column, taskMap, onTaskCreated, onTaskClick } = props;
+    const {index, column, taskMap, onTaskCreated, onTaskClick, onAssignUser} = props;
     const tasks = column.taskIds
         .map((taskId) => taskMap[taskId])
         .filter((task) => task !== undefined);
-    return <Column onTaskClick={onTaskClick} index={index} column={column} tasks={tasks} onTaskCreated={onTaskCreated} />;
+    return <Column onTaskClick={onTaskClick} index={index} column={column} tasks={tasks}
+                   onTaskCreated={onTaskCreated} onAssignUser={onAssignUser}/>;
 });
 
 let boardId: number;
 
-export async function loadBoardData({ params }: any) {
+export async function loadBoardData({params}: any) {
     try {
-         boardId = params.boardId;
+        boardId = params.boardId;
 
         console.log(`Fetching data for board: ${boardId} from ${BACKEND_URL}`);
 
@@ -165,18 +168,18 @@ export async function loadBoardData({ params }: any) {
             activeSprint: activeSprintInfo || null
         };
 
-    } catch(error) {
+    } catch (error) {
         console.error("Loader Error:", error);
         throw error;
     }
 }
 
 export default function Board() {
-    const { boardData, activeSprint } = useLoaderData() as any;
+    const {boardData, activeSprint} = useLoaderData() as any;
     const [data, setData] = useState(boardData);
     const [isAddColumnModal, setIsAddColumnModal] = useState(false);
     const [selectedTask, setSelectedTask] = useState<TaskCard | null>(null);
-    const { projectId: projectIdParam, boardId: boardIdParam } = useParams();
+    const {projectId: projectIdParam, boardId: boardIdParam} = useParams();
 
     useEffect(() => {
         setData(boardData);
@@ -185,6 +188,70 @@ export default function Board() {
     const handleTaskClick = (task: TaskCard) => {
         setSelectedTask(task);
     }
+
+    const handleAssignUser = (taskId: string, user: User) => {
+        setData((prevData: any) => ({
+            ...prevData,
+            tasks: {
+                ...prevData.tasks,
+                [taskId]: {
+                    ...prevData.tasks[taskId],
+                    assignees: [{
+                        name: user.fullName,
+                        avatar: user.avatarUrl
+                    }]
+                }
+            }
+        }));
+    };
+
+    const handleTaskUpdate = async () => {
+        // Reload data from API to ensure consistency
+        // Or update state locally if we have enough info
+        // For simplicity and correctness, let's refetch the board data
+        // But refetching might be heavy. 
+        // A better approach is to update the specific task in state if we know what changed.
+        // Since TaskDetailModal handles many fields, refetching might be safer or we can pass the updated task object back.
+        
+        // Let's try to refetch for now as it guarantees sync with backend logic (like status changes moving columns)
+        try {
+             const [tasksRes] = await Promise.all([
+                axios.get(`${BACKEND_URL}/tasks/${boardIdParam}/active-sprint`)
+            ]);
+            const tasks = tasksRes.data;
+            
+            // We need to merge this new task data into existing board structure
+            // This might be complex because convertToAppropriateFormat rebuilds everything.
+            // Let's try to just update the tasks map and columns if status changed.
+            
+            // Actually, re-running loadBoardData logic might be best but we are inside a component.
+            // Let's just re-fetch tasks and re-format.
+            
+            const rawData = {
+                tasks: tasks || [],
+                columns: Object.values(data.columns).map((c: any) => ({id: c.id, title: c.title})) // Reuse existing columns info
+            };
+            
+            // We need columns from current state to preserve order? 
+            // Actually convertToAppropriateFormat expects raw columns from API.
+            // Let's just fetch everything again to be safe.
+            
+            const [tasksRes2, columnsRes] = await Promise.all([
+                axios.get(`${BACKEND_URL}/tasks/${boardIdParam}/active-sprint`),
+                axios.get(`${BACKEND_URL}/boards/${boardIdParam}/columns`)
+            ]);
+            
+            const newData = convertToAppropriateFormat({
+                tasks: tasksRes2.data || [],
+                columns: columnsRes.data || []
+            });
+            
+            setData(newData);
+
+        } catch (error) {
+            console.error("Failed to refresh board data", error);
+        }
+    };
 
     const handleColumnAdded = ((newColumnBackend: any) => {
         const newColId = String(newColumnBackend.id);
@@ -262,7 +329,7 @@ export default function Board() {
 
     const onDragEnd = async (result: DropResult) => {
         console.log('Drag ended:', result);
-        const { destination, source, draggableId, type } = result;
+        const {destination, source, draggableId, type} = result;
         if (!destination ||
             (destination.droppableId === source.droppableId && destination.index === source.index)) {
             return;
@@ -323,10 +390,12 @@ export default function Board() {
                                     taskMap={data.tasks}
                                     onTaskCreated={handleCreateTask}
                                     onTaskClick={handleTaskClick}
+                                    onAssignUser={handleAssignUser}
                                 />
                             );
                         })}
-                        <Button icon={<span>+</span>} className="mx-4 py-10 px-4" onClick={() => setIsAddColumnModal(true)}>Create column</Button>
+                        <Button icon={<span>+</span>} className="mx-4 py-10 px-4"
+                                onClick={() => setIsAddColumnModal(true)}>Create column</Button>
                     </div>
                     {isAddColumnModal && (
                         <AddColumnModal boardId={boardId}
@@ -336,18 +405,11 @@ export default function Board() {
                 </div>
             </DragDropContext>
 
-            {selectedTask && (<Modal onClose={() => setSelectedTask(null)}>
-                <div className="mb-4">
-                    <h2 className="text-xl font-bold">Task Detail</h2>
-                </div>
-                <form action="" className={`flex flex-col items-start justify-center gap-2`}>
-
-                    <label htmlFor="">Title</label>
-                    <input type="text" name="title" id="" className={`w-full border border-gray-300 rounded-lg px-4 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}/>
-                    <label htmlFor="">Description</label>
-                    <input type="text" name="description" id="" className={`w-full border border-gray-300 rounded-lg px-4 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}/>
-                </form>
-            </Modal>)}
-    </>
+            {selectedTask && (<TaskDetailModal
+                taskId={Number(selectedTask.id)}
+                onClose={() => setSelectedTask(null)}
+                onTaskUpdate={handleTaskUpdate}
+            />)}
+        </>
     );
 }

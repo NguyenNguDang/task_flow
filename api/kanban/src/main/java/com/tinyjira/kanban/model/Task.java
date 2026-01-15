@@ -59,7 +59,7 @@ public class Task extends AbstractEntity<Long> {
     
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name = "task_user",
+            name = "tbl_task_user",
             joinColumns = @JoinColumn(name = "task_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
@@ -99,12 +99,7 @@ public class Task extends AbstractEntity<Long> {
     }
     
     public boolean canBeAssignedBy(User actor) {
-        User projectOwner = this.board.getProject().getOwner();
-        
-        boolean isOwner = projectOwner != null && projectOwner.equals(actor);
-        boolean isCreator = this.creator != null && this.creator.equals(actor);
-        
-        return isOwner || isCreator;
+        return true;
     }
     
     public void addSubtask(String title) {

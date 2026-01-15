@@ -17,59 +17,31 @@ public class CommentDto {
     private Long id;
     private String content;
     private Instant createdAt;
-    private UserSummaryDto author;
-    private List<AttachmentDto> attachments;
+    private String userName;
+    private String userAvatar;
+    private String attachmentUrl;
+    private String attachmentName;
     
     public static CommentDto fromEntity(Comment comment) {
         if (comment == null) return null;
+        
+        String attachmentUrl = null;
+        String attachmentName = null;
+        
+        if (comment.getAttachments() != null && !comment.getAttachments().isEmpty()) {
+            Attachment firstAttachment = comment.getAttachments().get(0);
+            attachmentUrl = firstAttachment.getFileUrl();
+            attachmentName = firstAttachment.getFileName();
+        }
         
         return CommentDto.builder()
                 .id(comment.getId())
                 .content(comment.getComment())
                 .createdAt(comment.getCreatedOn())
-                .author(UserSummaryDto.fromEntity(comment.getAuthor()))
-                .attachments(comment.getAttachments() != null
-                        ? comment.getAttachments().stream()
-                        .map(AttachmentDto::fromEntity)
-                        .collect(Collectors.toList())
-                        : Collections.emptyList())
+                .userName(comment.getAuthor() != null ? comment.getAuthor().getName() : "Unknown")
+                .userAvatar(comment.getAuthor() != null ? comment.getAuthor().getAvatarUrl() : null)
+                .attachmentUrl(attachmentUrl)
+                .attachmentName(attachmentName)
                 .build();
-    }
-    
-    @Data
-    @Builder
-    public static class AttachmentDto {
-        private Long id;
-        private String fileName;
-        private String fileUrl;
-        private String fileType;
-        private Long size;
-        
-        public static AttachmentDto fromEntity(Attachment attachment) {
-            return AttachmentDto.builder()
-                    .id(attachment.getId())
-                    .fileName(attachment.getFileName())
-                    .fileUrl(attachment.getFileUrl())
-                    .fileType(attachment.getFileType())
-                    .size(attachment.getSize())
-                    .build();
-        }
-    }
-    
-    @Data
-    @Builder
-    public static class UserSummaryDto {
-        private Long id;
-        private String username;
-        private String avatarUrl;
-        
-        public static UserSummaryDto fromEntity(User user) {
-            if (user == null) return null;
-            return UserSummaryDto.builder()
-                    .id(user.getId())
-                    .username(user.getUsername())
-                    .avatarUrl(user.getAvatarUrl()) // Nếu User có trường này
-                    .build();
-        }
     }
 }

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -55,5 +57,13 @@ public class CommentServiceImpl implements CommentService {
         
         Comment savedComment = commentRepository.save(comment);
         return CommentDto.fromEntity(savedComment);
+    }
+
+    @Override
+    public List<CommentDto> getCommentsByTask(Long taskId) {
+        List<Comment> comments = commentRepository.findByTaskIdOrderByCreatedOnDesc(taskId);
+        return comments.stream()
+                .map(CommentDto::fromEntity)
+                .collect(Collectors.toList());
     }
 }

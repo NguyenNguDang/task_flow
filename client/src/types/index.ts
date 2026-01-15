@@ -37,6 +37,7 @@ export interface TaskCard {
     title: string;
     description?: string;
     tag: string;
+    status?: string; // Added status field
     assignees: { name: string; avatar?: string }[];
     position?: number;
 }
@@ -95,4 +96,14 @@ export interface User {
     address?: string;
     avatarUrl?: string;
     roles?: string[];
+}
+
+export interface Comment {
+    id: number;
+    content: string;
+    createdAt: string;
+    userName: string;
+    userAvatar: string | null;
+    attachmentUrl?: string;
+    attachmentName?: string;
 }

@@ -9,7 +9,9 @@ import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.*;
 import com.tinyjira.kanban.repository.*;
 import com.tinyjira.kanban.service.TaskService;
+import com.tinyjira.kanban.utils.Priority;
 import com.tinyjira.kanban.utils.SprintStatus;
+import com.tinyjira.kanban.utils.TaskStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,9 +20,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 
 import java.nio.file.AccessDeniedException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 
@@ -159,6 +164,57 @@ public class TaskServiceImpl implements TaskService {
         }
     }
     
+    @Override
+    public TaskDetailResponse getTaskById(Long id) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        return TaskDetailResponse.fromEntity(task);
+    }
+
+    @Override
+    @Transactional
+    public void updateTask(Long taskId, Map<String, Object> updates) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        updates.forEach((key, value) -> {
+            switch (key) {
+                case "title":
+                    task.setTitle((String) value);
+                    break;
+                case "description":
+                    task.setDescription((String) value);
+                    break;
+                case "status":
+                    task.setStatus(TaskStatus.valueOf(((String) value).toUpperCase()));
+                    break;
+                case "priority":
+                    task.setPriority(Priority.valueOf(((String) value).toUpperCase()));
+                    break;
+                case "startDate":
+                    if (value != null) {
+                        // Assuming format YYYY-MM-DD
+                        task.setStartDate(LocalDate.parse((String) value).atStartOfDay());
+                    }
+                    break;
+                case "dueDate":
+                    if (value != null) {
+                        task.setDueDate(LocalDate.parse((String) value).atStartOfDay());
+                    }
+                    break;
+                case "estimateHours":
+                    if (value != null) {
+                        estimateTask(taskId, Double.valueOf(value.toString()));
+                    }
+                    break;
+                default:
+                    log.warn("Unknown field to update: {}", key);
+            }
+        });
+
+        taskRepository.save(task);
+    }
+    
     private double calculateNewPosition(List<Task> tasks, int index) {
         // column is empty
         if (tasks.isEmpty()) {
@@ -207,19 +263,7 @@ public class TaskServiceImpl implements TaskService {
     }
     
     private TaskDetailResponse toDto(Task task) {
-        User assignee = null;
-        int position = (task.getPosition() != null) ? task.getPosition().intValue() : 0;
-        return TaskDetailResponse.builder()
-                .id(task.getId())
-                .boardColumnId(task.getBoardColumn() != null ? task.getBoardColumn().getId() : null)
-                .sprintId(task.getSprint() != null ? task.getSprint().getId() : null)
-                .title(task.getTitle())
-                .description(task.getDescription())
-                .status(task.getStatus())
-                .priority(task.getPriority())
-                .assigneeName(null)
-                .position(position)
-                .build();
+        return TaskDetailResponse.fromEntity(task);
     }
     
     private Task toEntity(TaskRequest taskRequest) {
@@ -227,8 +271,13 @@ public class TaskServiceImpl implements TaskService {
             .orElseThrow(() -> new ResourceNotFoundException("Column not found!"));
         Board board = boardRepository.findById(taskRequest.getBoardId())
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found!"));
-        Sprint sprint = sprintRepository.findById(taskRequest.getSprintId())
-                .orElseThrow(() -> new ResourceNotFoundException("Sprint not found!"));
+        
+        Sprint sprint = null;
+        if (taskRequest.getSprintId() != null) {
+            sprint = sprintRepository.findById(taskRequest.getSprintId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Sprint not found!"));
+        }
+
         return Task.builder()
                 .title(taskRequest.getTitle())
                 .description(taskRequest.getDescription())
