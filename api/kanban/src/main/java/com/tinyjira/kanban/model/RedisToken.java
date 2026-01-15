@@ -12,11 +12,11 @@ import java.util.concurrent.TimeUnit;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@RedisHash("RedisHas")
+@RedisHash("RedisToken")
 public class RedisToken {
     @Id
-    private String jwtId;
+    private String id; // Use 'id' as the key in Redis
     
-    @TimeToLive(unit = TimeUnit.DAYS)
+    @TimeToLive(unit = TimeUnit.MILLISECONDS)
     private Long expiredTime;
 }
