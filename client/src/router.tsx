@@ -7,6 +7,8 @@ import Login from "./App/Login";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Register from "./App/Register";
 import ProjectDashboard from "./App/Project/Dashboard";
+import ProjectList from "./App/ProjectList";
+import Welcome from "./App/Welcome";
 
 export const router = createBrowserRouter([
     {
@@ -24,6 +26,10 @@ export const router = createBrowserRouter([
     {
         element: <ProtectedRoute />,
         children: [
+            {
+                path: "/projects",
+                element: <ProjectList />
+            },
             {
                 path: "/project/:projectId",
                 element: <App />,
@@ -43,7 +49,7 @@ export const router = createBrowserRouter([
                     },
                     {
                         index: true,
-                        element: <Navigate to="dashboard" replace />
+                        element: <Welcome />
                     }
                 ]
             }

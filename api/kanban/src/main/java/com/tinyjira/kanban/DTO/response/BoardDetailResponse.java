@@ -21,6 +21,7 @@ public class BoardDetailResponse {
         private Long id;
         private String title;
         private Integer order;
+        private String color;
         private List<TaskResponse> tasks;
     }
     

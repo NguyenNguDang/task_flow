@@ -8,6 +8,7 @@ import com.tinyjira.kanban.event.TaskEstimationUpdatedEvent;
 import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.*;
 import com.tinyjira.kanban.repository.*;
+import com.tinyjira.kanban.service.TaskHistoryService;
 import com.tinyjira.kanban.service.TaskService;
 import com.tinyjira.kanban.utils.Priority;
 import com.tinyjira.kanban.utils.SprintStatus;
@@ -45,6 +46,7 @@ public class TaskServiceImpl implements TaskService {
     private final BoardColumnRepository boardColumnRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final TaskHistoryService taskHistoryService;
     
     @Override
     public void moveTask(Long taskId, Long targetColumnId, int newIndex) {
@@ -109,6 +111,7 @@ public class TaskServiceImpl implements TaskService {
         } else {
             task.setPosition(maxPosition + 1000.0);
         }
+        task.setStatus(TaskStatus.TODO);
         taskRepository.save(task);
         log.info("Created new task!");
         return toDto(task);
@@ -130,8 +133,14 @@ public class TaskServiceImpl implements TaskService {
             throw new IllegalArgumentException("User này không thuộc dự án, vui lòng mời vào trước!");
         }
         
+        User oldAssignee = task.getAssignee();
+        String oldAssigneeName = oldAssignee != null ? oldAssignee.getName() : "Unassigned";
+        
         task.assign(assignee);
         taskRepository.save(task);
+        
+        // Log history
+        taskHistoryService.logHistory(task, currentUser, "assignee", oldAssigneeName, assignee.getName());
         
         eventPublisher.publishEvent(new TaskAssignedEvent(
                 task.getTitle(),
@@ -173,87 +182,133 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
-    public void updateTask(Long taskId, Map<String, Object> updates) {
+    public void updateTask(Long taskId, Map<String, Object> updates, User currentUser) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         updates.forEach((key, value) -> {
+            String oldValue = "";
+            String newValue = String.valueOf(value);
+            boolean changed = false;
+
             switch (key) {
                 case "title":
-                    task.setTitle((String) value);
+                    if (!task.getTitle().equals(value)) {
+                        oldValue = task.getTitle();
+                        task.setTitle((String) value);
+                        changed = true;
+                    }
                     break;
                 case "description":
-                    task.setDescription((String) value);
+                    // Description might be long, maybe just log "changed" or truncate
+                    if (task.getDescription() != null && !task.getDescription().equals(value)) {
+                        oldValue = "Old Description"; // Or truncate
+                        task.setDescription((String) value);
+                        newValue = "New Description";
+                        changed = true;
+                    } else if (task.getDescription() == null && value != null) {
+                        oldValue = "Empty";
+                        task.setDescription((String) value);
+                        newValue = "New Description";
+                        changed = true;
+                    }
                     break;
                 case "status":
-                    TaskStatus newStatus = TaskStatus.valueOf(((String) value).toUpperCase());
-                    task.setStatus(newStatus);
-                    
-                    // Logic tự động chuyển cột khi status thay đổi
-                    if (newStatus == TaskStatus.DONE) {
-                        // Tìm cột DONE trong board hiện tại
-                        Board board = task.getBoard();
-                        Optional<BoardColumn> doneColumn = board.getColumns().stream()
-                                .filter(col -> col.getTitle().equalsIgnoreCase("done"))
-                                .findFirst();
+                    if (!task.getStatus().name().equalsIgnoreCase((String) value)) {
+                        oldValue = task.getStatus().name();
+                        TaskStatus newStatus = TaskStatus.valueOf(((String) value).toUpperCase());
+                        task.setStatus(newStatus);
+                        newValue = newStatus.name();
+                        changed = true;
                         
-                        if (doneColumn.isPresent()) {
-                            // Di chuyển task sang cột DONE
-                            // Cần tính toán position mới (cuối cột)
-                            Double maxPos = taskRepository.findMaxPositionByBoardColumnId(doneColumn.get().getId());
-                            double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
+                        // Logic tự động chuyển cột khi status thay đổi
+                        if (newStatus == TaskStatus.DONE) {
+                            // Tìm cột DONE trong board hiện tại
+                            Board board = task.getBoard();
+                            Optional<BoardColumn> doneColumn = board.getColumns().stream()
+                                    .filter(col -> col.getTitle().equalsIgnoreCase("done"))
+                                    .findFirst();
                             
-                            task.setBoardColumn(doneColumn.get());
-                            task.setPosition(newPos);
-                        }
-                    } else if (newStatus == TaskStatus.TODO) {
-                         // Tìm cột TODO
-                        Board board = task.getBoard();
-                        Optional<BoardColumn> todoColumn = board.getColumns().stream()
-                                .filter(col -> col.getTitle().equalsIgnoreCase("to do") || col.getTitle().equalsIgnoreCase("todo"))
-                                .findFirst();
-                         if (todoColumn.isPresent()) {
-                            Double maxPos = taskRepository.findMaxPositionByBoardColumnId(todoColumn.get().getId());
-                            double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
-                            task.setBoardColumn(todoColumn.get());
-                            task.setPosition(newPos);
-                        }
-                    } else if (newStatus == TaskStatus.DOING) {
-                        // Tìm cột DOING / IN PROGRESS
-                        Board board = task.getBoard();
-                        Optional<BoardColumn> doingColumn = board.getColumns().stream()
-                                .filter(col -> col.getTitle().equalsIgnoreCase("doing") || col.getTitle().equalsIgnoreCase("in progress"))
-                                .findFirst();
-                        if (doingColumn.isPresent()) {
-                            Double maxPos = taskRepository.findMaxPositionByBoardColumnId(doingColumn.get().getId());
-                            double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
-                            task.setBoardColumn(doingColumn.get());
-                            task.setPosition(newPos);
+                            if (doneColumn.isPresent()) {
+                                Double maxPos = taskRepository.findMaxPositionByBoardColumnId(doneColumn.get().getId());
+                                double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
+                                task.setBoardColumn(doneColumn.get());
+                                task.setPosition(newPos);
+                            }
+                        } else if (newStatus == TaskStatus.TODO) {
+                             // Tìm cột TODO
+                            Board board = task.getBoard();
+                            Optional<BoardColumn> todoColumn = board.getColumns().stream()
+                                    .filter(col -> col.getTitle().equalsIgnoreCase("to do") || col.getTitle().equalsIgnoreCase("todo"))
+                                    .findFirst();
+                             if (todoColumn.isPresent()) {
+                                Double maxPos = taskRepository.findMaxPositionByBoardColumnId(todoColumn.get().getId());
+                                double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
+                                task.setBoardColumn(todoColumn.get());
+                                task.setPosition(newPos);
+                            }
+                        } else if (newStatus == TaskStatus.DOING) {
+                            // Tìm cột DOING / IN PROGRESS
+                            Board board = task.getBoard();
+                            Optional<BoardColumn> doingColumn = board.getColumns().stream()
+                                    .filter(col -> col.getTitle().equalsIgnoreCase("doing") || col.getTitle().equalsIgnoreCase("in progress"))
+                                    .findFirst();
+                            if (doingColumn.isPresent()) {
+                                Double maxPos = taskRepository.findMaxPositionByBoardColumnId(doingColumn.get().getId());
+                                double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
+                                task.setBoardColumn(doingColumn.get());
+                                task.setPosition(newPos);
+                            }
                         }
                     }
-
                     break;
                 case "priority":
-                    task.setPriority(Priority.valueOf(((String) value).toUpperCase()));
+                    if (!task.getPriority().name().equalsIgnoreCase((String) value)) {
+                        oldValue = task.getPriority().name();
+                        task.setPriority(Priority.valueOf(((String) value).toUpperCase()));
+                        newValue = task.getPriority().name();
+                        changed = true;
+                    }
                     break;
                 case "startDate":
                     if (value != null) {
-                        // Assuming format YYYY-MM-DD
-                        task.setStartDate(LocalDate.parse((String) value).atStartOfDay());
+                        LocalDate newDate = LocalDate.parse((String) value);
+                        if (task.getStartDate() == null || !task.getStartDate().toLocalDate().equals(newDate)) {
+                            oldValue = task.getStartDate() != null ? task.getStartDate().toLocalDate().toString() : "None";
+                            task.setStartDate(newDate.atStartOfDay());
+                            newValue = newDate.toString();
+                            changed = true;
+                        }
                     }
                     break;
                 case "dueDate":
                     if (value != null) {
-                        task.setDueDate(LocalDate.parse((String) value).atStartOfDay());
+                        LocalDate newDate = LocalDate.parse((String) value);
+                        if (task.getDueDate() == null || !task.getDueDate().toLocalDate().equals(newDate)) {
+                            oldValue = task.getDueDate() != null ? task.getDueDate().toLocalDate().toString() : "None";
+                            task.setDueDate(newDate.atStartOfDay());
+                            newValue = newDate.toString();
+                            changed = true;
+                        }
                     }
                     break;
                 case "estimateHours":
                     if (value != null) {
-                        estimateTask(taskId, Double.valueOf(value.toString()));
+                        Double newEst = Double.valueOf(value.toString());
+                        if (task.getEstimateHours() == null || !task.getEstimateHours().equals(newEst)) {
+                            oldValue = task.getEstimateHours() != null ? task.getEstimateHours().toString() : "0";
+                            estimateTask(taskId, newEst);
+                            newValue = newEst.toString();
+                            changed = true;
+                        }
                     }
                     break;
                 default:
                     log.warn("Unknown field to update: {}", key);
+            }
+            
+            if (changed) {
+                taskHistoryService.logHistory(task, currentUser, key, oldValue, newValue);
             }
         });
 

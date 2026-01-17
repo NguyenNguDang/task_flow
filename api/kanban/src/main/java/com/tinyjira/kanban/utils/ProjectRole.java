@@ -3,12 +3,8 @@ package com.tinyjira.kanban.utils;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public enum ProjectRole {
-    @JsonProperty("admin")
-    ADMIN,
+    @JsonProperty("project_manager")
+    PROJECT_MANAGER,
     @JsonProperty("member")
-    MEMBER,
-    @JsonProperty("owner")
-    OWNER,
-    @JsonProperty("viewer")
-    VIEWER
+    MEMBER
 }

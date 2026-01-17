@@ -25,7 +25,7 @@ public interface TaskService {
     
     TaskDetailResponse getTaskById(@Min(1) Long id);
 
-    void updateTask(Long taskId, Map<String, Object> updates);
+    void updateTask(Long taskId, Map<String, Object> updates, User currentUser);
 
     void deleteTask(Long taskId);
 

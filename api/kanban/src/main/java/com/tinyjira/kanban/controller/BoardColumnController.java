@@ -34,5 +34,11 @@ public class BoardColumnController {
         boardColumnService.deleteColumn(columnId);
         return ResponseEntity.ok("Column deleted successfully");
     }
+
+    @PutMapping("/{columnId}")
+    public ResponseEntity<ColumnDetailResponse> updateColumn(@PathVariable Long columnId,
+                                                             @RequestBody @Valid ColumnRequest request) {
+        return ResponseEntity.ok(boardColumnService.updateColumn(columnId, request));
+    }
     
 }

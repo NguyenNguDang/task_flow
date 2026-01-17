@@ -11,4 +11,5 @@ public class ColumnDetailResponse {
     private Long id;
     private String title;
     private Integer position;
+    private String color;
 }

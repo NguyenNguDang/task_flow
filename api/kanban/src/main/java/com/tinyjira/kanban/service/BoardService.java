@@ -14,5 +14,6 @@ public interface BoardService {
     
     
     BoardDetailResponse getBoardData(Long id);
-    
+
+    void deleteBoard(Long id);
 }

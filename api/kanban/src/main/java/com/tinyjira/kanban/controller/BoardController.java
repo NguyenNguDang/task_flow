@@ -55,4 +55,10 @@ public class BoardController {
     public ResponseEntity<?> getBoardColumns(@PathVariable Long boardId) {
         return ResponseEntity.ok(boardColumnService.getColumnsByBoardId(boardId));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteBoard(@PathVariable Long id) {
+        boardService.deleteBoard(id);
+        return ResponseEntity.ok("Board deleted successfully");
+    }
 }

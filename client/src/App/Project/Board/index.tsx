@@ -289,32 +289,38 @@ export default function Board() {
             console.log("New task", newTask);
             console.log("Task vừa tạo có ID là:", newTask.id);
 
-            setData((prevData: any) => {
-                if (!prevData) return prevData;
+            // Show toast if no active sprint
+            if (!activeSprint?.id) {
+                toast.info("Chưa có Sprint nào đang chạy. Task sẽ được chuyển vào Backlog.");
+            } else {
+                // Only update UI if there is an active sprint (task appears on board)
+                setData((prevData: any) => {
+                    if (!prevData) return prevData;
 
-                const newTaskId = String(newTask.id);
-                const colIdStr = String(columnId);
+                    const newTaskId = String(newTask.id);
+                    const colIdStr = String(columnId);
 
-                const columnToUpdate = prevData.columns[colIdStr];
+                    const columnToUpdate = prevData.columns[colIdStr];
 
-                if (!columnToUpdate) return prevData;
+                    if (!columnToUpdate) return prevData;
 
-                return {
-                    ...prevData,
-                    tasks: {
-                        ...prevData.tasks,
-                        [newTaskId]: newTask,
-                    },
-
-                    columns: {
-                        ...prevData.columns,
-                        [colIdStr]: {
-                            ...columnToUpdate,
-                            taskIds: [...columnToUpdate.taskIds, newTaskId],
+                    return {
+                        ...prevData,
+                        tasks: {
+                            ...prevData.tasks,
+                            [newTaskId]: newTask,
                         },
-                    },
-                };
-            });
+
+                        columns: {
+                            ...prevData.columns,
+                            [colIdStr]: {
+                                ...columnToUpdate,
+                                taskIds: [...columnToUpdate.taskIds, newTaskId],
+                            },
+                        },
+                    };
+                });
+            }
 
         } catch (error) {
             console.error("Lỗi rồi:", error);

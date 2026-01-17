@@ -35,6 +35,7 @@ export function convertToAppropriateFormat(data: any) {
         board.columns[colIdStr] = {
             id: colIdStr,
             title: col.title,
+            color: col.color, // Map color field
             taskIds: [],
         };
         board.columnOrder.push(colIdStr);

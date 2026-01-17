@@ -1,10 +1,13 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "./Icons/Logo";
 import { Plus } from "./Icons/Plus";
 import React from "react";
+import { CiLogout } from "react-icons/ci";
+import axiosClient from "../../api";
+import { toast } from "react-toastify";
 
-const NavItem = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
-    <div className="w-full flex flex-row items-center flex-nowrap hover:bg-[#ffffff1a] hover:cursor-pointer py-1 relative">
+const NavItem = ({ icon, label, onClick }: { icon: React.ReactNode; label: string, onClick?: () => void }) => (
+    <div onClick={onClick} className="w-full flex flex-row items-center flex-nowrap hover:bg-[#ffffff1a] hover:cursor-pointer py-1 relative">
         {/* Icon Container */}
         <div className="min-w-16 min-h-[42px] flex flex-col items-center justify-center">
             {icon}
@@ -16,23 +19,49 @@ const NavItem = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
 );
 
 export default function Navbar() {
-    return (
-        <div className="group fixed top-0 left-0 w-16 bg-[#0747a6] h-full hover:w-[200px] transition-all duration-100 ease-in-out shadow-2xl text-[#c1d6f2] overflow-hidden z-50">
+    const navigate = useNavigate();
 
-            <div className="w-full h-16 flex items-center justify-center mb-4">
-                <Logo size={28} />
+    const handleLogout = async () => {
+        try {
+            await axiosClient.post("/auth/logout");
+            localStorage.clear();
+            toast.success("Đăng xuất thành công!");
+            navigate("/login");
+        } catch (error) {
+            console.error("Logout failed", error);
+            // Vẫn clear local storage và chuyển hướng dù API lỗi để đảm bảo user thoát được
+            localStorage.clear();
+            navigate("/login");
+        }
+    };
+
+    return (
+        <div className="group fixed top-0 left-0 w-16 bg-[#0747a6] h-full hover:w-[200px] transition-all duration-100 ease-in-out shadow-2xl text-[#c1d6f2] overflow-hidden z-50 flex flex-col justify-between">
+
+            <div>
+                <div className="w-full h-16 flex items-center justify-center mb-4">
+                    <Logo size={28} />
+                </div>
+
+                <div className="flex flex-col w-full">
+
+                    <Link to={{ search: "modal-issue-create=true" }}>
+                        <NavItem icon={<Plus />} label="create issue" />
+                    </Link>
+
+                    <Link to="/projects">
+                        <NavItem icon={<Plus />} label="All Projects" />
+                    </Link>
+
+                </div>
             </div>
 
-            <div className="flex flex-col w-full">
-
-                <Link to={{ search: "modal-issue-create=true" }}>
-                    <NavItem icon={<Plus />} label="create issue" />
-                </Link>
-
-                <Link to="/projects">
-                    <NavItem icon={<Plus />} label="All Projects" />
-                </Link>
-
+            <div className="mb-4">
+                <NavItem 
+                    icon={<CiLogout size={24} />} 
+                    label="Logout" 
+                    onClick={handleLogout}
+                />
             </div>
         </div>
     );

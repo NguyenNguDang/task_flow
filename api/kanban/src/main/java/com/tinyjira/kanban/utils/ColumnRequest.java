@@ -7,4 +7,5 @@ import lombok.Setter;
 @Setter
 public class ColumnRequest {
     public String title;
+    public String color;
 }

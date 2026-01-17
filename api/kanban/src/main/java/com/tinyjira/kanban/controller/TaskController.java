@@ -6,8 +6,10 @@ import com.tinyjira.kanban.DTO.request.CreateCommentRequest;
 import com.tinyjira.kanban.DTO.request.MoveTaskRequest;
 import com.tinyjira.kanban.DTO.request.TaskRequest;
 import com.tinyjira.kanban.DTO.response.TaskDetailResponse;
+import com.tinyjira.kanban.DTO.response.TaskHistoryResponse;
 import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.service.CommentService;
+import com.tinyjira.kanban.service.TaskHistoryService;
 import com.tinyjira.kanban.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,6 +38,7 @@ import java.util.Map;
 public class TaskController {
     private final TaskService taskService;
     private final CommentService commentService;
+    private final TaskHistoryService taskHistoryService;
     
     @GetMapping("/{id}")
     public ResponseEntity<?> getTask(@PathVariable @Min(1) Long id) {
@@ -94,8 +97,12 @@ public class TaskController {
     }
 
     @PutMapping("/{taskId}")
-    public ResponseEntity<?> updateTask(@PathVariable Long taskId, @RequestBody Map<String, Object> updates) {
-        taskService.updateTask(taskId, updates);
+    public ResponseEntity<?> updateTask(
+            @PathVariable Long taskId, 
+            @RequestBody Map<String, Object> updates,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        taskService.updateTask(taskId, updates, currentUser);
         return ResponseEntity.ok("Task updated successfully");
     }
 
@@ -114,5 +121,9 @@ public class TaskController {
         taskService.moveTaskToSprint(taskId, sprintId);
         return ResponseEntity.ok("Task moved to sprint successfully");
     }
-   
+
+    @GetMapping("/{taskId}/history")
+    public ResponseEntity<List<TaskHistoryResponse>> getTaskHistory(@PathVariable Long taskId) {
+        return ResponseEntity.ok(taskHistoryService.getHistoryByTaskId(taskId));
+    }
 }

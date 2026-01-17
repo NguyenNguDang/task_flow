@@ -10,11 +10,6 @@ import { FaTrash, FaUserCircle, FaCheck } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 
-interface TaskDetailType {
-    title: string;
-    description: string;
-}
-
 interface UserInfo {
     id: number;
     fullName: string;
@@ -30,14 +25,6 @@ interface SubtaskInfo {
     id: number;
     title: string;
     completed: boolean;
-}
-
-interface CommentInfo {
-    id: number;
-    content: string;
-    createdAt: string;
-    userName: string;
-    userAvatar: string | null;
 }
 
 interface TaskDetailType {
@@ -56,6 +43,16 @@ interface TaskDetailType {
     estimateHours?: number;
 }
 
+interface HistoryInfo {
+    id: number;
+    userName: string;
+    userAvatar: string | null;
+    field: string;
+    oldValue: string;
+    newValue: string;
+    createdAt: string;
+}
+
 const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, onClose: () => void, onTaskUpdate?: () => void }) => {
     const [taskDetail, setTaskDetail] = useState<TaskDetailType | null>(null);
     const [loading, setLoading] = useState(true);
@@ -63,6 +60,10 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
     const [isAddingSubtask, setIsAddingSubtask] = useState(false);
     const [subtaskTitle, setSubtaskTitle] = useState("");
     const { projectId } = useParams();
+    
+    // Activity Tabs
+    const [activeTab, setActiveTab] = useState<'All' | 'Comments' | 'History'>('All');
+    const [history, setHistory] = useState<HistoryInfo[]>([]);
     
     // Assignee Dropdown State
     const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
@@ -92,16 +93,7 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
 
         const fetchDetail = async () => {
             try {
-                console.log("Fetching task ID:", taskId);
-
                 const data = await axiosClient.get(`/tasks/${taskId}`) as TaskDetailType;
-                
-                // Map API response to match UserInfo interface if needed
-                if (data.assignee && !data.assignee.fullName && (data.assignee as any).username) {
-                     // If API returns username but not fullName, map it or handle it
-                     // Assuming API returns UserSummaryDto which has username, fullName, avatarUrl
-                }
-
                 setTaskDetail(data);
             } catch (error) {
                 console.error("API Error:", error);
@@ -114,6 +106,22 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
             fetchDetail();
         }
     }, [taskId]);
+
+    // Fetch history when tab changes or task loads
+    useEffect(() => {
+        if (activeTab === 'History' || activeTab === 'All') {
+            fetchHistory();
+        }
+    }, [activeTab, taskId]);
+
+    const fetchHistory = async () => {
+        try {
+            const res = await axiosClient.get(`/tasks/${taskId}/history`) as HistoryInfo[];
+            setHistory(res);
+        } catch (error) {
+            console.error("Failed to fetch history", error);
+        }
+    };
 
     // Handle click outside for assignee menu
     useEffect(() => {
@@ -140,15 +148,17 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
     }, []);
 
     const handleUpdateTask = async (field: string, value: any) => {
-        // Optimistic update
         setTaskDetail(prev => prev ? { ...prev, [field]: value } : null);
 
         try {
             await taskService.update(String(taskId), { [field]: value });
             onTaskUpdate?.();
+            // Refresh history if we are viewing it
+            if (activeTab === 'History' || activeTab === 'All') {
+                fetchHistory();
+            }
         } catch (error) {
             console.error(`Failed to update ${field}:`, error);
-            // Revert logic could be added here
         }
     };
 
@@ -195,6 +205,7 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
         try {
             await taskService.assignUser(taskId, user.id);
             onTaskUpdate?.();
+            if (activeTab === 'History' || activeTab === 'All') fetchHistory();
         } catch (error) {
             console.error("Lỗi assign:", error);
         }
@@ -210,6 +221,7 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
             try {
                 await taskService.updateStoryPoints(taskId, taskDetail.estimateHours);
                 onTaskUpdate?.();
+                if (activeTab === 'History' || activeTab === 'All') fetchHistory();
             } catch (error) {
                 console.error("Failed to update story points", error);
             }
@@ -224,7 +236,6 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
 
         try {
             const response = await taskService.createSubtask(taskId, subtaskTitle);
-            
             const newSubtask: SubtaskInfo = (response as any).data || {
                 id: Date.now(), 
                 title: subtaskTitle,
@@ -292,8 +303,8 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
         try {
             await taskService.delete(taskId);
             toast.success("Task deleted successfully");
-            onClose(); // Close modal
-            onTaskUpdate?.(); // Refresh board
+            onClose(); 
+            onTaskUpdate?.(); 
         } catch (error) {
             console.error("Failed to delete task", error);
             toast.error("Failed to delete task");
@@ -308,43 +319,60 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
 
     const handleMarkAsDone = async () => {
         if (!taskDetail) return;
-        
-        // Optimistic update
         setTaskDetail(prev => prev ? { ...prev, status: 'DONE' } : null);
         
         try {
-            // Update status to DONE
             await taskService.update(String(taskId), { status: 'DONE' });
-            
-            // We also need to move the task to the "Done" column visually and logically
-            // However, the backend might handle moving to the correct column based on status change
-            // or we might need to find the "Done" column ID and call updatePosition.
-            // For now, let's rely on onTaskUpdate to refresh the board which should reflect the change.
-            // But to be safe and consistent with drag-drop logic, we might need to know the Done column ID.
-            // Since we don't have column info here easily, we rely on the parent component (Board) to refresh.
-            
-            // Trigger parent update
             onTaskUpdate?.();
-            
-            // Close modal maybe? Or keep it open to show it's done.
-            // Let's keep it open but show it as done.
-            
+            if (activeTab === 'History' || activeTab === 'All') fetchHistory();
         } catch (error) {
             console.error("Failed to mark as done", error);
-            // Revert
             setTaskDetail(prev => prev ? { ...prev, status: taskDetail.status } : null);
         }
     };
 
-    if (loading) return <Modal onClose={onClose}><div>Loading...</div></Modal>;
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
 
-    if (!taskDetail) return <Modal onClose={onClose}><div>Không tìm thấy dữ liệu task! (Vui lòng check console)</div></Modal>;
+    const renderHistoryItem = (item: HistoryInfo) => (
+        <div key={item.id} className="flex gap-3 mb-4 text-sm">
+            <img 
+                src={item.userAvatar || "https://via.placeholder.com/32"} 
+                alt={item.userName} 
+                className="w-8 h-8 rounded-full flex-shrink-0"
+            />
+            <div>
+                <div className="flex items-center gap-2">
+                    <span className="font-semibold">{item.userName}</span>
+                    <span className="text-gray-500 text-xs">
+                        {formatDate(item.createdAt)}
+                    </span>
+                </div>
+                <div className="text-gray-700 mt-1">
+                    Changed <span className="font-medium">{item.field}</span> from 
+                    <span className="line-through mx-1 text-gray-500">{item.oldValue || "empty"}</span> 
+                    to <span className="font-medium">{item.newValue}</span>
+                </div>
+            </div>
+        </div>
+    );
+
+    if (loading) return <Modal onClose={onClose}><div>Loading...</div></Modal>;
+    if (!taskDetail) return <Modal onClose={onClose}><div>Không tìm thấy dữ liệu task!</div></Modal>;
     
     const isDone = taskDetail.status === 'DONE';
 
     return (
         <Modal onClose={onClose}>
-            <div className="grid grid-cols-3 gap-4"> {/* Tăng gap cho thoáng */}
+            <div className="grid grid-cols-3 gap-4"> 
 
                 {/* --- CỘT TRÁI (Nội dung chính) --- */}
                 <div className="col-span-2 space-y-4">
@@ -372,8 +400,6 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                                 </>
                             )}
                         </button>
-                        
-                        {/* Breadcrumbs or ID could go here */}
                         <span className="text-xs text-gray-500">#{taskId}</span>
                     </div>
 
@@ -499,14 +525,74 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                     {/* Activity / Comments */}
                     <div>
                         <h4 className="font-semibold mb-2">Activity</h4>
-                        <div className="flex gap-2 mb-2">
+                        <div className="flex gap-2 mb-4 border-b">
                             {['All', 'Comments', 'History'].map(tab => (
-                                <button key={tab} className="bg-gray-100 px-2 py-1 rounded text-sm">{tab}</button>
+                                <button 
+                                    key={tab} 
+                                    className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                                        activeTab === tab 
+                                        ? 'border-blue-600 text-blue-600' 
+                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                    }`}
+                                    onClick={() => setActiveTab(tab as any)}
+                                >
+                                    {tab}
+                                </button>
                             ))}
                         </div>
 
-                        {/* Replace old comments list with TaskComments component */}
-                        <TaskComments taskId={taskId} initialComments={taskDetail.comments} />
+                        <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                            {activeTab === 'Comments' && (
+                                <TaskComments taskId={taskId} initialComments={taskDetail.comments} />
+                            )}
+                            
+                            {activeTab === 'History' && (
+                                <div className="space-y-4">
+                                    {history.length > 0 ? history.map(renderHistoryItem) : <p className="text-gray-500 text-sm">No history yet.</p>}
+                                </div>
+                            )}
+
+                            {activeTab === 'All' && (
+                                <div className="space-y-6">
+                                    {(() => {
+                                        const combined = [
+                                            ...history.map(h => ({ ...h, type: 'history', date: new Date(h.createdAt) })),
+                                            ...(taskDetail.comments || []).map(c => ({ ...c, type: 'comment', date: new Date(c.createdAt) }))
+                                        ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+                                        if (combined.length === 0) return <p className="text-gray-500 text-sm">No activity yet.</p>;
+
+                                        return combined.map((item: any) => {
+                                            if (item.type === 'history') return renderHistoryItem(item);
+                                            return (
+                                                <div key={`comment-${item.id}`} className="flex gap-3 mb-4 text-sm">
+                                                     <img 
+                                                        src={item.userAvatar || "https://via.placeholder.com/32"} 
+                                                        alt={item.userName} 
+                                                        className="w-8 h-8 rounded-full flex-shrink-0"
+                                                    />
+                                                    <div className="flex-grow">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-semibold">{item.userName}</span>
+                                                            <span className="text-gray-500 text-xs">
+                                                                {formatDate(item.createdAt)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-1 text-gray-800 bg-gray-50 p-2 rounded">
+                                                            {item.content}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+                                    
+                                    <div className="mt-4 pt-4 border-t">
+                                         <TaskComments taskId={taskId} initialComments={[]} hideList={true} />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -528,7 +614,6 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                             className="flex items-center gap-2 group hover:bg-gray-100 p-1 rounded cursor-pointer -ml-1 transition-colors relative"
                             onClick={handleAssigneeClick}
                         >
-                            {/* Avatar tự đổi theo state taskDetail.assignee */}
                             <img
                                 src={taskDetail.assignee?.avatarUrl || "https://via.placeholder.com/24"}
                                 className="w-6 h-6 rounded-full border border-gray-300"
@@ -577,6 +662,7 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                             />
                         </div>
 
+                        {/* Due Date */}
                         <div className="text-gray-500">Due date</div>
                         <div>
                             <input 

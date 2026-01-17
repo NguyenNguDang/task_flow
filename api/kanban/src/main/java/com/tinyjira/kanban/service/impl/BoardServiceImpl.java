@@ -45,9 +45,9 @@ public class BoardServiceImpl implements BoardService {
 
         // Create default columns
         List<BoardColumn> defaultColumns = new ArrayList<>();
-        defaultColumns.add(new BoardColumn("TODO", 0, savedBoard));
-        defaultColumns.add(new BoardColumn("DOING", 1, savedBoard));
-        defaultColumns.add(new BoardColumn("DONE", 2, savedBoard));
+        defaultColumns.add(new BoardColumn("TODO", 0, savedBoard, "#dfe1e6"));
+        defaultColumns.add(new BoardColumn("DOING", 1, savedBoard, "#dfe1e6"));
+        defaultColumns.add(new BoardColumn("DONE", 2, savedBoard, "#e3fcef")); // Xanh lá nhạt cho DONE
 
         boardColumnRepository.saveAll(defaultColumns);
         
@@ -102,6 +102,7 @@ public class BoardServiceImpl implements BoardService {
                             .id(col.getId())
                             .title(col.getTitle())
                             .order(col.getColumnOrder())
+                            .color(col.getColor())
                             .tasks(taskDTOs)
                             .build();
                 })
@@ -113,6 +114,15 @@ public class BoardServiceImpl implements BoardService {
                 .description(board.getDescription())
                 .columns(columnDTOs)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void deleteBoard(Long id) {
+        if (!boardRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Board not found");
+        }
+        boardRepository.deleteById(id);
     }
     
     private BoardDTO toDTO(Board board) {

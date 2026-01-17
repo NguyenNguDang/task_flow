@@ -10,14 +10,17 @@ import com.tinyjira.kanban.repository.ProjectRepository;
 import com.tinyjira.kanban.repository.UserRepository;
 import com.tinyjira.kanban.service.ProjectService;
 import com.tinyjira.kanban.service.generator.ProjectKeyGenerator;
+import com.tinyjira.kanban.utils.ProjectRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +74,14 @@ public class ProjectServiceImpl implements ProjectService {
     public void updateProject(Long projectId, Map<String, Object> updates) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+        
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (project.getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to update this project.");
+        }
 
         updates.forEach((key, value) -> {
             switch (key) {
@@ -79,6 +90,11 @@ public class ProjectServiceImpl implements ProjectService {
                     break;
                 case "description":
                     project.setDescription((String) value);
+                    break;
+                case "endDate":
+                    if (value != null && !value.toString().isEmpty()) {
+                        project.setEndDate(LocalDate.parse(value.toString()));
+                    }
                     break;
                 default:
                     log.warn("Unknown field to update: {}", key);
@@ -91,9 +107,17 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional
     public void deleteProject(Long projectId) {
-        if (!projectRepository.existsById(projectId)) {
-            throw new ResourceNotFoundException("Project not found");
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (project.getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to delete this project.");
         }
+
         projectRepository.deleteById(projectId);
     }
 }

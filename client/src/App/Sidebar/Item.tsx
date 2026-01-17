@@ -1,5 +1,4 @@
 import React, {useState} from 'react';
-import {Button} from "../../Components/Button.tsx";
 import {Kanban} from "./Icons";
 import {useProject} from "../../context/ProjectContext.tsx";
 import {useLocation} from "react-router-dom";
@@ -60,33 +59,40 @@ const Item = () => {
 
     return (
         <div className="w-full">
-            <div className="flex items-center justify-between w-full mb-2 group">
-                <Button
-                    icon={<Kanban />}
-                    active={location.pathname.includes('project')}
+            {/* Custom Project Header Item */}
+            <div className="px-2">
+                <div 
+                    className={`
+                        flex items-center justify-between w-full py-2 px-2 cursor-pointer transition-colors duration-200 group hover:bg-[#ebecf0] text-[#42526e] rounded
+                    `}
                     onClick={toggleMenu}
-                    className="flex-grow justify-start"
                 >
-                    Projects
-                </Button>
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setIsCreateModalOpen(true);
-                    }}
-                    className="p-1.5 mr-2 text-gray-500 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Create Project"
-                >
-                    <FaPlus size={12} />
-                </button>
+                    <div className="flex items-center gap-3">
+                        <div className="w-6 flex justify-center">
+                            <Kanban />
+                        </div>
+                        <span className="font-medium">Projects</span>
+                    </div>
+                    
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsCreateModalOpen(true);
+                        }}
+                        className="p-1.5 rounded hover:bg-gray-300 text-gray-500 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                        title="Create Project"
+                    >
+                        <FaPlus size={12} />
+                    </button>
+                </div>
             </div>
 
             {isOpen && (
-                <ul className="py-2 px-2 transition-all duration-200 bg-gray-50 rounded-md">
-                    {isLoading && <li className="text-gray-400 text-xs px-2">Loading...</li>}
+                <ul className="py-1 transition-all duration-200">
+                    {isLoading && <li className="text-gray-400 text-xs px-6 py-2">Loading...</li>}
 
                     {!isLoading && projects.length === 0 && (
-                        <li className="text-gray-400 text-xs px-2">No projects found</li>
+                        <li className="text-gray-400 text-xs px-6 py-2">No projects found</li>
                     )}
 
                     {/* Render từng dòng Project */}

@@ -11,6 +11,7 @@ interface BoardFormData {
     projectId: number;
     title: string;
     description: string;
+    color?: string;
 }
 
 interface ProjectFormData {
@@ -24,11 +25,17 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
     const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     
-    // Menu state
+    // Menu state for Project
     const [showMenu, setShowMenu] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
     const menuButtonRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Menu state for Board
+    const [showBoardMenu, setShowBoardMenu] = useState(false);
+    const [boardMenuPosition, setBoardMenuPosition] = useState({ top: 0, left: 0 });
+    const [selectedBoardId, setSelectedBoardId] = useState<number | null>(null);
+    const boardMenuRef = useRef<HTMLDivElement>(null);
 
     const boards = project.boards || [];
     const location = useLocation();
@@ -51,6 +58,10 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
                 menuButtonRef.current && !menuButtonRef.current.contains(event.target as Node)) {
                 setShowMenu(false);
             }
+            
+            if (boardMenuRef.current && !boardMenuRef.current.contains(event.target as Node)) {
+                setShowBoardMenu(false);
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -66,6 +77,18 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
             });
             setShowMenu(!showMenu);
         }
+    };
+
+    const handleBoardMenuClick = (e: React.MouseEvent, boardId: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = (e.target as HTMLElement).getBoundingClientRect();
+        setBoardMenuPosition({
+            top: rect.bottom + window.scrollY + 5,
+            left: rect.left + window.scrollX
+        });
+        setSelectedBoardId(boardId);
+        setShowBoardMenu(true);
     };
 
     const handleBoardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,18 +147,32 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
         }
     };
 
+    const handleDeleteBoard = async () => {
+        if (!selectedBoardId) return;
+        if (!window.confirm("Are you sure you want to delete this board?")) return;
+
+        try {
+            await axiosClient.delete(`/boards/${selectedBoardId}`);
+            toast.success("Board deleted successfully!");
+            setShowBoardMenu(false);
+            onProjectUpdate?.();
+        } catch (error) {
+            toast.error("Failed to delete board!");
+        }
+    };
+
     const isActiveProject = location.pathname.includes(`/project/${project.id}`);
 
     return (
-        <li className="mb-1 select-none">
+        <li className="mb-0.5 select-none">
             <div
                 className={`
-                    group flex items-center justify-between p-2 rounded-md cursor-pointer transition-all duration-200
+                    group flex items-center justify-between py-2 px-4 cursor-pointer transition-all duration-200
                     ${isActiveProject ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}
                 `}
                 onClick={() => setIsExpanded(!isExpanded)}
             >
-                <div className="flex items-center gap-2.5 overflow-hidden flex-grow">
+                <div className="flex items-center gap-2.5 overflow-hidden flex-grow pl-2">
                     <span className={`text-[10px] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''} text-gray-400`}>
                         <FaChevronRight />
                     </span>
@@ -180,26 +217,35 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
                 overflow-hidden transition-all duration-300 ease-in-out
                 ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}
             `}>
-                <ul className="ml-4 pl-3 border-l border-gray-200 my-1 space-y-0.5">
+                <ul className="my-1 space-y-0.5">
                     {boards.length === 0 && (
-                        <li className="text-xs text-gray-400 py-1 pl-2 italic">No boards yet</li>
+                        <li className="text-xs text-gray-400 py-1 pl-10 italic">No boards yet</li>
                     )}
 
                     {boards.map((board: any) => {
                         const isActiveBoard = location.pathname.includes(`/board/${board.id}`);
                         return (
-                            <li key={board.id}>
+                            <li key={board.id} className="group/board relative">
                                 <Link
                                     to={`/project/${project.id}/board/${board.id}`}
                                     className={`
-                                        flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors
+                                        flex items-center justify-between py-1.5 pl-10 pr-4 text-xs transition-colors
                                         ${isActiveBoard 
                                             ? 'bg-blue-100 text-blue-700 font-medium' 
                                             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}
                                     `}
                                 >
-                                    <BsKanban size={12} className={isActiveBoard ? 'text-blue-600' : 'text-gray-400'} />
-                                    <span className="truncate">{board.title}</span>
+                                    <div className="flex items-center gap-2 truncate">
+                                        <BsKanban size={12} className={isActiveBoard ? 'text-blue-600' : 'text-gray-400'} />
+                                        <span className="truncate">{board.title}</span>
+                                    </div>
+                                    
+                                    <div 
+                                        className="opacity-0 group-hover/board:opacity-100 p-1 hover:bg-gray-200 rounded cursor-pointer"
+                                        onClick={(e) => handleBoardMenuClick(e, board.id)}
+                                    >
+                                        <FaEllipsisH size={10} />
+                                    </div>
                                 </Link>
                             </li>
                         );
@@ -207,7 +253,7 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
                 </ul>
             </div>
 
-            {/* Context Menu Portal */}
+            {/* Project Context Menu Portal */}
             {showMenu && createPortal(
                 <div 
                     ref={menuRef}
@@ -236,6 +282,30 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
                         }}
                     >
                         <FaTrash size={12} /> Delete
+                    </button>
+                </div>,
+                document.body
+            )}
+
+            {/* Board Context Menu Portal */}
+            {showBoardMenu && createPortal(
+                <div 
+                    ref={boardMenuRef}
+                    style={{ 
+                        top: boardMenuPosition.top, 
+                        left: boardMenuPosition.left,
+                        position: 'absolute',
+                        zIndex: 9999 
+                    }}
+                    className="bg-white shadow-xl rounded-md border border-gray-200 w-32 py-1 animate-in fade-in zoom-in duration-200"
+                >
+                    <button 
+                        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        onClick={() => {
+                            handleDeleteBoard();
+                        }}
+                    >
+                        <FaTrash size={12} /> Delete Board
                     </button>
                 </div>,
                 document.body

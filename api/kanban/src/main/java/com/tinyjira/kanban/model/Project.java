@@ -84,4 +84,15 @@ public class Project extends AbstractEntity<Long> {
         return members.stream()
                 .anyMatch(m -> m.getUser().getId().equals(user.getId()));
     }
+
+    public ProjectRole getRole(User user) {
+        if (this.owner.equals(user)) {
+            return ProjectRole.PROJECT_MANAGER;
+        }
+        return members.stream()
+                .filter(m -> m.getUser().getId().equals(user.getId()))
+                .findFirst()
+                .map(ProjectMember::getProjectRole)
+                .orElse(null);
+    }
 }

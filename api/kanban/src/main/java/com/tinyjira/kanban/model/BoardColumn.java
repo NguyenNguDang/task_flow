@@ -22,6 +22,8 @@ public class BoardColumn extends AbstractEntity<Long> {
     private String title;
     
     private int columnOrder;
+
+    private String color;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "board_id")
@@ -49,6 +51,11 @@ public class BoardColumn extends AbstractEntity<Long> {
         this.columnOrder = order;
         this.board = board;
     }
+
+    public BoardColumn(String title, int order, Board board, String color) {
+        this(title, order, board);
+        this.color = color;
+    }
     
     @JsonValue
     public Map<String, Object> toJson() {
@@ -56,6 +63,7 @@ public class BoardColumn extends AbstractEntity<Long> {
         jsonMap.put("id", this.getId());
         jsonMap.put("title", title);
         jsonMap.put("column_order", columnOrder);
+        jsonMap.put("color", color);
         return jsonMap;
     }
 }

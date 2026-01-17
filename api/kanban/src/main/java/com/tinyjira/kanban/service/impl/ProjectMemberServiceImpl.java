@@ -2,6 +2,7 @@ package com.tinyjira.kanban.service.impl;
 
 import com.tinyjira.kanban.event.MemberInvitedEvent;
 import com.tinyjira.kanban.event.MemberLeftEvent;
+import com.tinyjira.kanban.exception.DomainException;
 import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.Project;
 import com.tinyjira.kanban.model.User;
@@ -12,10 +13,10 @@ import com.tinyjira.kanban.utils.ProjectRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.AccessDeniedException;
 import java.util.Objects;
 
 @Slf4j
@@ -28,11 +29,11 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     
     @Override
     @Transactional
-    public void inviteMember(Long projectId, String email, User inviter) throws AccessDeniedException {
+    public void inviteMember(Long projectId, String email, User inviter) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
         
-        if (!Objects.equals(project.getOwner().getId(), inviter.getId())) {
+        if (project.getRole(inviter) != ProjectRole.PROJECT_MANAGER) {
             throw new AccessDeniedException("You don't have permission to invite member!");
         }
         
@@ -65,5 +66,23 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
                 currentUser.getUsername(),
                 project.getOwner().getEmail()
         ));
+    }
+
+    @Override
+    @Transactional
+    public void removeMember(Long projectId, Long userId, User requester) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        // Only owner can remove members
+        if (project.getRole(requester) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You don't have permission to remove member!");
+        }
+
+        User userToRemove = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        project.removeMember(userToRemove);
+        projectRepository.save(project);
     }
 }

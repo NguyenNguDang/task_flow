@@ -93,7 +93,7 @@ const TopAppBar = () => {
                                     
                                     <div className="py-1">
                                         <button 
-                                            onClick={() => navigate("/project/1/dashboard")}
+                                            onClick={() => navigate("/projects")}
                                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors dark:text-gray-300 dark:hover:bg-gray-700"
                                         >
                                             Dashboard
