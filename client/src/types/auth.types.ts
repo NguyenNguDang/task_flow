@@ -4,10 +4,10 @@ export interface LoginPayload {
 }
 
 export interface User {
-    avatarUrl?: string | undefined;
     id: number;
     name: string;
     email: string;
+    avatarUrl?: string;
 }
 
 export interface AuthResponse {

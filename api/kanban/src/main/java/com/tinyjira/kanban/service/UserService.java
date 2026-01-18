@@ -7,10 +7,12 @@ import com.tinyjira.kanban.DTO.response.UserDetailResponse;
 import com.tinyjira.kanban.model.User;
 import jakarta.validation.Valid;
 
+import java.io.IOException;
+
 public interface UserService {
     RegisterResponse createUser(RegisterRequest registerRequest);
     
-    void executeUpdates(User currentUser, @Valid UpdateProfileRequest req);
+    UserDetailResponse executeUpdates(User currentUser, @Valid UpdateProfileRequest req) throws IOException;
     
     UserDetailResponse getMyProfile(String email);
 }

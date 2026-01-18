@@ -18,6 +18,12 @@
 		<java.version>17</java.version>
 	</properties>
 	<dependencies>
+        <!--cloudinary-->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http44</artifactId>
+            <version>1.36.0</version>
+        </dependency>
         <!--swagger-->
         <dependency>
             <groupId>org.springdoc</groupId>

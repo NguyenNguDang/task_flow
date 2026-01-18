@@ -147,6 +147,11 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // Helper để lấy link avatar, nếu null thì fallback sang ui-avatars
+    const getAvatarSrc = (url: string | null | undefined, name: string) => {
+        return url ? url : `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "User")}&background=random&color=fff`;
+    };
+
     const handleUpdateTask = async (field: string, value: any) => {
         setTaskDetail(prev => prev ? { ...prev, [field]: value } : null);
 
@@ -345,7 +350,7 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
     const renderHistoryItem = (item: HistoryInfo) => (
         <div key={item.id} className="flex gap-3 mb-4 text-sm">
             <img 
-                src={item.userAvatar || "https://via.placeholder.com/32"} 
+                src={getAvatarSrc(item.userAvatar, item.userName)}
                 alt={item.userName} 
                 className="w-8 h-8 rounded-full flex-shrink-0"
             />
@@ -567,7 +572,7 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                                             return (
                                                 <div key={`comment-${item.id}`} className="flex gap-3 mb-4 text-sm">
                                                      <img 
-                                                        src={item.userAvatar || "https://via.placeholder.com/32"} 
+                                                        src={getAvatarSrc(item.userAvatar, item.userName)}
                                                         alt={item.userName} 
                                                         className="w-8 h-8 rounded-full flex-shrink-0"
                                                     />
@@ -615,7 +620,7 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                             onClick={handleAssigneeClick}
                         >
                             <img
-                                src={taskDetail.assignee?.avatarUrl || "https://via.placeholder.com/24"}
+                                src={getAvatarSrc(taskDetail.assignee?.avatarUrl, taskDetail.assignee?.fullName || "Unassigned")}
                                 className="w-6 h-6 rounded-full border border-gray-300"
                                 alt="avatar"
                             />
@@ -683,7 +688,7 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                         <div className="text-gray-500">Reporter</div>
                         <div className="flex items-center gap-2">
                             <img
-                                src={taskDetail.reporter?.avatarUrl || "https://via.placeholder.com/24"}
+                                src={getAvatarSrc(taskDetail.reporter?.avatarUrl, taskDetail.reporter?.fullName || "Unknown")}
                                 className="w-6 h-6 rounded-full"
                             />
                             <span>{taskDetail.reporter?.fullName || "Unknown"}</span>
@@ -711,11 +716,11 @@ const TaskDetailModal = ({ taskId, onClose, onTaskUpdate }: { taskId: number, on
                             className="flex items-center gap-2 p-2 hover:bg-blue-50 cursor-pointer text-sm transition-colors"
                             onClick={() => handleSelectAssignee(user)}
                         >
-                            {user.avatarUrl ? (
-                                <img src={user.avatarUrl} alt={user.fullName} className="w-6 h-6 rounded-full border border-gray-200" />
-                            ) : (
-                                <FaUserCircle size={24} className="text-gray-400" />
-                            )}
+                            <img 
+                                src={getAvatarSrc(user.avatarUrl, user.fullName)} 
+                                alt={user.fullName} 
+                                className="w-6 h-6 rounded-full border border-gray-200" 
+                            />
                             <span className="truncate">{user.fullName}</span>
                         </div>
                     ))}

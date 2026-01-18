@@ -40,6 +40,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .email(user.getEmail())
                 .id(user.getId())
                 .name(user.getName())
+                .avatarUrl(user.getAvatarUrl())
                 .build();
         
         return LoginResponse.builder()
@@ -73,4 +74,3 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
     }
 }
-

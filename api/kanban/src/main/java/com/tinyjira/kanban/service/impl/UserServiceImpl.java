@@ -9,7 +9,7 @@ import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.repository.UserRepository;
 import com.tinyjira.kanban.service.UserService;
 import com.tinyjira.kanban.service.command.*;
-import com.tinyjira.kanban.service.strategy.FileStorageStrategy;
+import com.tinyjira.kanban.service.strategy.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,7 +24,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final FileStorageStrategy fileStorageStrategy;
+    private final ImageStorageService imageStorageService;
     
     
     @Override
@@ -44,7 +44,7 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    public void executeUpdates(User currentUser, UpdateProfileRequest request) {
+    public UserDetailResponse executeUpdates(User currentUser, UpdateProfileRequest request) throws IOException {
         List<UpdateProfileCommand> commands = new ArrayList<>();
         
         if (request.getFullName() != null) {
@@ -68,7 +68,7 @@ public class UserServiceImpl implements UserService {
                 commands.add(UpdateAvatarCommand.builder()
                         .fileName(request.getAvatarFile().getOriginalFilename())
                         .fileData(request.getAvatarFile().getBytes())
-                        .storageStrategy(fileStorageStrategy)
+                        .imageStorageService(imageStorageService)
                         .build());
                 
             } catch (IOException e) {
@@ -89,6 +89,8 @@ public class UserServiceImpl implements UserService {
         }
         
         userRepository.save(currentUser);
+        
+        return getMyProfile(currentUser.getEmail());
     }
     
     @Override

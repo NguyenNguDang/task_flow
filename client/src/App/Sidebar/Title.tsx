@@ -2,8 +2,9 @@ import {useAuth} from "../../context/AuthContext.tsx";
 import {HTMLAttributes} from "react";
 
 interface TitleProps extends HTMLAttributes<HTMLDivElement> {
+    avatarTimestamp?: number;
 }
-export default function Title({ className, ...props }: TitleProps) {
+export default function Title({ className, avatarTimestamp, ...props }: TitleProps) {
     const { user } = useAuth();
 
 
@@ -26,7 +27,7 @@ export default function Title({ className, ...props }: TitleProps) {
             <div className="size-10 min-w-[40px] rounded-full overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center bg-indigo-500 text-white font-bold text-lg">
                 {user.avatarUrl ? (
                     <img
-                        src={user.avatarUrl}
+                        src={`${user.avatarUrl}${avatarTimestamp ? `?t=${avatarTimestamp}` : ''}`}
                         alt={user.name}
                         className="w-full h-full object-cover"
                     />

@@ -17,6 +17,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
 
 @Validated
 @RestController
@@ -43,9 +45,9 @@ public class UserController {
     
     @PutMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProfileUser(@AuthenticationPrincipal User currentUser,
-                                               @ModelAttribute UpdateProfileRequest req) {
-        userService.executeUpdates(currentUser, req);
-        return ResponseEntity.ok("Successfully updated profile");
+                                               @ModelAttribute UpdateProfileRequest req) throws IOException {
+        UserDetailResponse response = userService.executeUpdates(currentUser, req);
+        return ResponseEntity.ok(response);
     }
     
     

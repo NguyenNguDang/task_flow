@@ -20,6 +20,7 @@ import {FaList} from "react-icons/fa";
 import { useProjectPermissions } from "../../hooks/useProjectPermissions";
 import { CiLogout } from "react-icons/ci";
 import axiosClient from "../../api";
+import {useAuth} from "../../context/AuthContext.tsx";
 
 interface ProfileFormInputs {
     fullName: string;
@@ -38,6 +39,7 @@ export const Sidebar = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const { isProjectManager } = useProjectPermissions();
+    const { setUser } = useAuth();
     const [avatarTimestamp, setAvatarTimestamp] = useState(Date.now());
 
     const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProfileFormInputs>();
@@ -57,7 +59,6 @@ export const Sidebar = () => {
             setValue("email", user.email || "");
             setValue("phone", user.phone || "");
             setValue("address", user.address || "");
-            // Assuming user object has bio field, if not, it will be ignored or need to update User type
             setValue("bio", user.bio || "");
         } catch (error) {
             console.error("Lỗi lấy thông tin user:", error);
@@ -77,10 +78,16 @@ export const Sidebar = () => {
             formData.append("bio", data.bio);
 
             if (data.avatar && data.avatar.length > 0) {
-                formData.append("avatar", data.avatar[0]);
+                formData.append("avatarFile", data.avatar[0]);
             }
 
-            await userService.updateProfile(formData);
+            // Gọi API và nhận về thông tin user mới nhất (bao gồm avatarUrl mới)
+            const response: any = await userService.updateProfile(formData);
+            const updatedUser = response.data || response;
+            
+            // Cập nhật Global State để Title và các nơi khác đổi avatar ngay lập tức
+            if (setUser) setUser(updatedUser);
+
             toast.success("Profile updated successfully!");
             
             setAvatarTimestamp(Date.now()); // Force refresh image
@@ -114,7 +121,7 @@ export const Sidebar = () => {
             
             <div className="w-full flex flex-col items-center">
                 <div className="w-full px-4">
-                    <Title className="cursor-pointer" onClick={() => setIsOpen(true)}/>
+                    <Title className="cursor-pointer" onClick={() => setIsOpen(true)} avatarTimestamp={avatarTimestamp}/>
                 </div>
                 
                 <Item/>
