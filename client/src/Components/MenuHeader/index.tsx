@@ -12,6 +12,7 @@ import { MdDashboard } from "react-icons/md";
 import { FaUsers } from "react-icons/fa";
 import { FaTrash } from "react-icons/fa";
 import { BsFileBarGraph } from "react-icons/bs";
+import { HiOutlineDocumentReport } from "react-icons/hi";
 
 type ModalType = "MENU" | "ADD_PEOPLE" | "USERS" | null;
 
@@ -176,6 +177,17 @@ const MenuHeader = () => {
                         disabled={!boardId}
                     >
                         Board
+                    </Button>
+                </div>
+                <div>
+                    <Button
+                        icon={<HiOutlineDocumentReport />}
+                        active={location.pathname.includes('reports')}
+                        onClick={() => boardId && handleNavigate(`reports/${boardId}`)}
+                        className={`w-full mb-2 justify-start ${!boardId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!boardId}
+                    >
+                        Reports
                     </Button>
                 </div>
                 <div>

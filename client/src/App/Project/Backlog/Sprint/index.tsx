@@ -9,6 +9,7 @@ import { CiCalendarDate } from "react-icons/ci";
 import SprintReportModal from "../../../../Components/SprintReportModal";
 import { Modal } from "../../../../Components/Modal";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
+import TaskDetailModal from "../../Board/TaskDetailModal";
 
 type ModalType = "EDIT" | "UPDATE" | null;
 
@@ -27,6 +28,8 @@ type SprintProps = {
     onCreateTask: (title: string) => void;
     onDeleteSprint?: (id: number) => void;
     onUpdateSprint?: (id: number, data: Partial<SprintType>) => void;
+    onUpdateTask?: (taskId: number, updates: Partial<Task>) => void;
+    onDeleteTask?: (taskId: number) => void;
 };
 
 export const Sprint = ({
@@ -43,7 +46,9 @@ export const Sprint = ({
                            onCompleteSprint,
                            onCreateTask,
                            onDeleteSprint,
-                           onUpdateSprint
+                           onUpdateSprint,
+                           onUpdateTask,
+                           onDeleteTask
                        }: SprintProps) => {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [targetSprintInfo, setTargetSprintInfo] = useState<{ id: number | null, name: string }>({
@@ -56,6 +61,7 @@ export const Sprint = ({
     const [isCreating, setIsCreating] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState("");
     const [showReport, setShowReport] = useState(false);
+    const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
     
     // Edit Sprint State
     const [editData, setEditData] = useState({ name: title, startDate: startDate || '', endDate: endDate || '' });
@@ -252,10 +258,13 @@ export const Sprint = ({
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
+                                        onClick={() => setSelectedTaskId(task.id)}
                                     >
                                         <TaskItem
                                             task={task}
                                             renderPriority={renderPriority}
+                                            onUpdateTask={onUpdateTask}
+                                            onDeleteTask={onDeleteTask}
                                         />
                                     </div>
                                 )}
@@ -384,6 +393,25 @@ export const Sprint = ({
                 <SprintReportModal
                     sprintId={sprintId}
                     onClose={() => setShowReport(false)}
+                />
+            )}
+
+            {/* --- TASK DETAIL MODAL --- */}
+            {selectedTaskId && (
+                <TaskDetailModal
+                    taskId={selectedTaskId}
+                    onClose={() => setSelectedTaskId(null)}
+                    onTaskUpdate={() => {
+                        // Trigger parent refresh or update local state
+                        // For now, we can rely on parent passing down updated tasks or refetching
+                        // But ideally, we should call a prop to refresh data
+                        if (onUpdateTask) {
+                            // This is a bit tricky since we don't have the full task object here easily without fetching
+                            // But the parent Backlog component fetches all tasks.
+                            // We can trigger a re-fetch in parent by calling a callback
+                             window.location.reload(); // Simple but heavy. Better to use context or callback.
+                        }
+                    }}
                 />
             )}
         </div>

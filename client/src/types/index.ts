@@ -21,14 +21,26 @@ export type Assignee = {
 
 export interface Task {
     id: number;
+    taskKey?: string; // Added taskKey
     title: string;
     description: string;
     position?: number;
     status: 'todo' | 'doing' | 'done';
     sprintId: number | null;
-    assigneeName: string | null;
-    assigneeAvatar: string | null;
+    
+    // Updated to match backend response
+    assignee?: {
+        id: number;
+        fullName: string;
+        avatarUrl: string | null;
+    };
+    estimateHours?: number;
+    
+    // Legacy fields (optional)
+    assigneeName?: string | null;
+    assigneeAvatar?: string | null;
     storyPoint?: number;
+
     priority: string;
 }
 

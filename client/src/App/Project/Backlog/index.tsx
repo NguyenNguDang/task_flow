@@ -11,6 +11,7 @@ import MenuHeader from "../../../Components/MenuHeader";
 import axiosClient from "../../../api";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { taskService } from "../../../services/task.service";
+import { FaArrowUp, FaArrowDown, FaMinus } from "react-icons/fa";
 
 export default function Backlog() {
     const [search, setSearch] = useState('');
@@ -33,7 +34,9 @@ export default function Backlog() {
                 if (sprintsRes.ok && tasksRes.ok) {
                     const sprintsData = await sprintsRes.json();
                     const tasksData = await tasksRes.json();
-                    setSprints(sprintsData);
+                    // Filter out completed sprints for Backlog view
+                    const activeAndFutureSprints = sprintsData.filter((s: SprintType) => s.status !== 'completed');
+                    setSprints(activeAndFutureSprints);
                     setAllTasks(tasksData);
                 }
             } catch (error) {
@@ -58,14 +61,36 @@ export default function Backlog() {
     };
 
     const renderPriority = (priority: string) => {
-        const colors: Record<string, string> = {
-            highest: 'text-red-600',
-            high: 'text-orange-500',
-            medium: 'text-yellow-500',
-            low: 'text-blue-400'
-        };
-        const colorClass = colors[priority?.toLowerCase()] || 'text-yellow-500';
-        return <span className={`text-xs font-bold uppercase ${colorClass}`}>↑</span>;
+        switch (priority?.toLowerCase()) {
+            case 'high':
+                return (
+                    <div className="flex flex-col gap-[1px]" title="High Priority">
+                        <div className="w-3 h-[2px] bg-red-500"></div>
+                        <div className="w-3 h-[2px] bg-red-500"></div>
+                        <div className="w-3 h-[2px] bg-red-500"></div>
+                    </div>
+                );
+            case 'medium':
+                return (
+                    <div className="flex flex-col gap-[1px]" title="Medium Priority">
+                        <div className="w-3 h-[2px] bg-orange-400"></div>
+                        <div className="w-3 h-[2px] bg-orange-400"></div>
+                    </div>
+                );
+            case 'low':
+                return (
+                    <div className="flex flex-col gap-[1px]" title="Low Priority">
+                        <div className="w-3 h-[2px] bg-green-500"></div>
+                    </div>
+                );
+            default:
+                return (
+                    <div className="flex flex-col gap-[1px]" title="Medium Priority">
+                        <div className="w-3 h-[2px] bg-gray-400"></div>
+                        <div className="w-3 h-[2px] bg-gray-400"></div>
+                    </div>
+                );
+        }
     };
 
     const handleSprintCreated = (newSprint: SprintType) => {
@@ -164,6 +189,32 @@ export default function Backlog() {
         }
     };
 
+    const handleUpdateTask = async (taskId: number, updates: Partial<Task>) => {
+        try {
+            // Optimistic update
+            setAllTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+            
+            await taskService.update(String(taskId), updates);
+            toast.success("Task updated");
+        } catch (error) {
+            console.error("Failed to update task", error);
+            toast.error("Failed to update task");
+            // Revert logic could be added here
+        }
+    };
+
+    const handleDeleteTask = async (taskId: number) => {
+         if (!window.confirm("Are you sure you want to delete this task?")) return;
+         try {
+             await taskService.delete(taskId);
+             setAllTasks(prev => prev.filter(t => t.id !== taskId));
+             toast.success("Task deleted");
+         } catch (error) {
+             console.error("Failed to delete task", error);
+             toast.error("Failed to delete task");
+         }
+    };
+
     const onDragEnd = async (result: DropResult) => {
         const { destination, source, draggableId } = result;
 
@@ -241,6 +292,8 @@ export default function Backlog() {
                                 onCreateTask={(title) => handleCreateTask(sprint.id, title)}
                                 onDeleteSprint={handleDeleteSprint}
                                 onUpdateSprint={handleUpdateSprint}
+                                onUpdateTask={handleUpdateTask}
+                                onDeleteTask={handleDeleteTask}
                             />
                         ))}
                     </div>
@@ -251,6 +304,8 @@ export default function Backlog() {
                             tasks={getBacklogTasks()}
                             renderPriority={renderPriority}
                             onCreateTask={(title) => handleCreateTask(null, title)}
+                            onUpdateTask={handleUpdateTask}
+                            onDeleteTask={handleDeleteTask}
                         />
                     </div>
                 </DragDropContext>

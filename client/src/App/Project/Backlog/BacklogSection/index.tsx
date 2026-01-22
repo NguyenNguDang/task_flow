@@ -6,16 +6,20 @@ import { MdSubdirectoryArrowLeft } from "react-icons/md";
 import { HiUserCircle } from "react-icons/hi";
 import { CiCalendarDate } from "react-icons/ci";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
+import TaskDetailModal from "../../Board/TaskDetailModal";
 
 interface BacklogSectionProps {
     tasks: Task[];
     renderPriority: (priority: string) => React.ReactNode;
     onCreateTask: (title: string) => void;
+    onUpdateTask?: (taskId: number, updates: Partial<Task>) => void;
+    onDeleteTask?: (taskId: number) => void;
 }
 
-export const BacklogSection = ({ tasks, renderPriority, onCreateTask }: BacklogSectionProps) => {
+export const BacklogSection = ({ tasks, renderPriority, onCreateTask, onUpdateTask, onDeleteTask }: BacklogSectionProps) => {
     const [isCreating, setIsCreating] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState("");
+    const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
     const handleStartCreate = () => {
         setIsCreating(true);
@@ -74,6 +78,7 @@ export const BacklogSection = ({ tasks, renderPriority, onCreateTask }: BacklogS
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
+                                        onClick={() => setSelectedTaskId(task.id)}
                                     >
                                         <TaskItem
                                             task={task}
@@ -133,6 +138,19 @@ export const BacklogSection = ({ tasks, renderPriority, onCreateTask }: BacklogS
                     </div>
                 )}
             </Droppable>
+
+            {/* --- TASK DETAIL MODAL --- */}
+            {selectedTaskId && (
+                <TaskDetailModal
+                    taskId={selectedTaskId}
+                    onClose={() => setSelectedTaskId(null)}
+                    onTaskUpdate={() => {
+                        if (onUpdateTask) {
+                             window.location.reload(); 
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 };

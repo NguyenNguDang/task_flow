@@ -10,6 +10,7 @@ import ProjectDashboard from "./App/Project/Dashboard";
 import ProjectList from "./App/ProjectList";
 import Welcome from "./App/Welcome";
 import Summary from "./App/Project/Summary";
+import Reports from "./App/Project/Reports";
 
 export const router = createBrowserRouter([
     {
@@ -51,6 +52,10 @@ export const router = createBrowserRouter([
                     {
                         path: "summary",
                         element: <Summary />
+                    },
+                    {
+                        path: "reports/:boardId",
+                        element: <Reports />
                     },
                     {
                         index: true,

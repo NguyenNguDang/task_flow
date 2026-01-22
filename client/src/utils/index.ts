@@ -11,6 +11,9 @@ export const getHeaderTitle = (pathname: string): string => {
     if (pathname.includes("dashboard")) {
         return 'Dashboard';
     }
+    if (pathname.includes("reports")) {
+        return 'Reports';
+    }
     return "Header Title";
 }
 
