@@ -132,7 +132,12 @@ export const Sidebar = () => {
                 
                 {isProjectManager && (
                     <div className="w-full px-2">
-                        <Button icon={<Settings/>}>Project Settings</Button>
+                        <Button 
+                            icon={<Settings/>} 
+                            className={NOT_IMPLEMENTED}
+                        >
+                            Project Settings
+                        </Button>
                     </div>
                 )}
                 

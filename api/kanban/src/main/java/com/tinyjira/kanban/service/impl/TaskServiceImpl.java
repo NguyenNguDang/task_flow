@@ -103,7 +103,7 @@ public class TaskServiceImpl implements TaskService {
     }
     
     @Override
-    public TaskDetailResponse createTask(TaskRequest taskRequest) {
+    public TaskDetailResponse createTask(TaskRequest taskRequest, User creator) {
         Task task = toEntity(taskRequest);
         Double maxPosition = taskRepository.findMaxPositionByBoardColumnId(taskRequest.getColumnId());
         if (maxPosition == null) {
@@ -112,6 +112,7 @@ public class TaskServiceImpl implements TaskService {
             task.setPosition(maxPosition + 1000.0);
         }
         task.setStatus(TaskStatus.TODO);
+        task.setCreator(creator);
         taskRepository.save(task);
         log.info("Created new task!");
         return toDto(task);

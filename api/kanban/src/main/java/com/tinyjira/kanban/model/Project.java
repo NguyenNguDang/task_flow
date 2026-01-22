@@ -9,6 +9,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -28,10 +29,12 @@ public class Project extends AbstractEntity<Long> {
     private ProjectStatus projectStatus;
     
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProjectMember> members;
+    @Builder.Default
+    private List<ProjectMember> members = new ArrayList<>();
     
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Board> boards;
+    @Builder.Default
+    private List<Board> boards = new ArrayList<>();
     
     @ManyToOne
     @JoinColumn(name = "owner_id")
@@ -51,6 +54,10 @@ public class Project extends AbstractEntity<Long> {
     }
     
     public void addMember(User user, ProjectRole role) {
+        if (this.members == null) {
+            this.members = new ArrayList<>();
+        }
+
         boolean exists = this.members.stream()
                 .anyMatch(m -> m.getUser().getId().equals(user.getId()));
         
@@ -69,7 +76,7 @@ public class Project extends AbstractEntity<Long> {
     }
     
     public void removeMember(User user) {
-        if (this.owner.equals(user)) {
+        if (this.owner.getId().equals(user.getId())) {
             throw new DomainException("Chủ dự án không thể rời đi. Vui lòng chuyển quyền Owner trước!");
         }
         
@@ -86,7 +93,7 @@ public class Project extends AbstractEntity<Long> {
     }
 
     public ProjectRole getRole(User user) {
-        if (this.owner.equals(user)) {
+        if (this.owner.getId().equals(user.getId())) {
             return ProjectRole.PROJECT_MANAGER;
         }
         return members.stream()

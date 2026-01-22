@@ -9,6 +9,7 @@ import Register from "./App/Register";
 import ProjectDashboard from "./App/Project/Dashboard";
 import ProjectList from "./App/ProjectList";
 import Welcome from "./App/Welcome";
+import Summary from "./App/Project/Summary";
 
 export const router = createBrowserRouter([
     {
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
                     {
                         path: "dashboard",
                         element: <ProjectDashboard />
+                    },
+                    {
+                        path: "summary",
+                        element: <Summary />
                     },
                     {
                         index: true,

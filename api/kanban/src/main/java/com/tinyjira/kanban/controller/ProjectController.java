@@ -2,10 +2,12 @@ package com.tinyjira.kanban.controller;
 
 import com.tinyjira.kanban.DTO.request.CreateProjectRequest;
 import com.tinyjira.kanban.DTO.response.ProjectDetailResponse;
+import com.tinyjira.kanban.DTO.response.ProjectSummaryResponse;
 import com.tinyjira.kanban.DTO.response.UserSummaryResponse;
 import com.tinyjira.kanban.model.Project;
 import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.service.ProjectService;
+import com.tinyjira.kanban.service.ProjectSummaryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,7 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:5173")
 public class ProjectController {
     private final ProjectService projectService;
+    private final ProjectSummaryService projectSummaryService;
     
     @GetMapping
     public ResponseEntity<?> getAllProjects(@RequestParam(defaultValue = "0") int page,
@@ -70,4 +73,8 @@ public class ProjectController {
         return ResponseEntity.ok("Project deleted successfully");
     }
 
+    @GetMapping("/{projectId}/summary")
+    public ResponseEntity<ProjectSummaryResponse> getProjectSummary(@PathVariable Long projectId) {
+        return ResponseEntity.ok(projectSummaryService.getProjectSummary(projectId));
+    }
 }

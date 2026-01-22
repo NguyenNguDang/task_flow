@@ -33,9 +33,9 @@ export const TaskItem = ({ task, renderPriority }: TaskItemProps) => {
                         {renderPriority(task.priority)}
                     </div>
 
-                    {task.assignee ? (
+                    {task.assigneeName ? (
                         <div className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold uppercase">
-                            {task.assignee.charAt(0)}
+                            {task.assigneeName.charAt(0)}
                         </div>
                     ) : (
                         <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-xs">?</div>

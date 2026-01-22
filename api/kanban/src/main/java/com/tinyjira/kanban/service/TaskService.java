@@ -17,7 +17,7 @@ public interface TaskService {
     
     List<TaskDetailResponse> getTasksInActiveSprint(Long boardId);
     
-    TaskDetailResponse createTask(TaskRequest taskRequest);
+    TaskDetailResponse createTask(TaskRequest taskRequest, User creator);
     
     void assignTask(Long taskId, Long assigneeId, User currentUser) throws AccessDeniedException;
     

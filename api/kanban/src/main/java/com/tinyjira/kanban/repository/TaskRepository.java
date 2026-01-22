@@ -1,5 +1,6 @@
 package com.tinyjira.kanban.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.tinyjira.kanban.DTO.TaskStatusCount;
@@ -56,5 +57,31 @@ public interface TaskRepository extends CrudRepository<Task, Long> {
     List<User> findTopPerformersByTaskCount(@Param("sprintId") Long sprintId, Pageable pageable);
     
     long countBySprintIdAndStatus(Long sprintId, TaskStatus taskStatus);
-}
 
+    // --- Summary Queries ---
+
+    // 1. Stats
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.board.project.id = :projectId AND t.status = 'DONE' AND t.updatedAt >= :since")
+    long countDoneTasksSince(@Param("projectId") Long projectId, @Param("since") LocalDateTime since);
+
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.board.project.id = :projectId AND t.updatedAt >= :since")
+    long countUpdatedTasksSince(@Param("projectId") Long projectId, @Param("since") LocalDateTime since);
+
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.board.project.id = :projectId AND t.createdAt >= :since")
+    long countCreatedTasksSince(@Param("projectId") Long projectId, @Param("since") LocalDateTime since);
+
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.board.project.id = :projectId AND t.dueDate BETWEEN :now AND :dueLimit AND t.status <> 'DONE'")
+    long countDueSoonTasks(@Param("projectId") Long projectId, @Param("now") LocalDateTime now, @Param("dueLimit") LocalDateTime dueLimit);
+
+    // 2. Priority Breakdown
+    @Query("SELECT t.priority, COUNT(t) FROM Task t WHERE t.board.project.id = :projectId GROUP BY t.priority")
+    List<Object[]> countTasksByPriority(@Param("projectId") Long projectId);
+
+    // 3. Workload (Assignee Breakdown)
+    @Query("SELECT t.assignee, COUNT(t) FROM Task t WHERE t.board.project.id = :projectId GROUP BY t.assignee")
+    List<Object[]> countTasksByAssignee(@Param("projectId") Long projectId);
+    
+    // 4. Total tasks in project
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.board.project.id = :projectId")
+    long countTotalTasksByProjectId(@Param("projectId") Long projectId);
+}

@@ -60,8 +60,8 @@ public class TaskController {
     
     @PostMapping
     @Operation(summary = "Create a new task", description = "API này dùng để tạo task mới vào cột")
-    public ResponseEntity<?> createTask(@RequestBody @Valid TaskRequest taskRequest) {
-        TaskDetailResponse response = taskService.createTask(taskRequest);
+    public ResponseEntity<?> createTask(@RequestBody @Valid TaskRequest taskRequest, @AuthenticationPrincipal User creator) {
+        TaskDetailResponse response = taskService.createTask(taskRequest, creator);
         Map<String, Object> result = new HashMap<>();
         result.put("message", "Tạo task thành công!");
         result.put("data", response);

@@ -11,6 +11,7 @@ import {toast} from "react-toastify";
 import { MdDashboard } from "react-icons/md";
 import { FaUsers } from "react-icons/fa";
 import { FaTrash } from "react-icons/fa";
+import { BsFileBarGraph } from "react-icons/bs";
 
 type ModalType = "MENU" | "ADD_PEOPLE" | "USERS" | null;
 
@@ -145,6 +146,16 @@ const MenuHeader = () => {
                 <p className={`flex justify-start items-center gap-4 font-bold uppercase`}>{projectName} <span onClick={() => {openModal("MENU")}} className={`rounded cursor-pointer hover:bg-gray-100`}><AiOutlineEllipsis size={40} /></span></p>
             </div>
             <div className="flex justify-start items-center gap-3 py-4">
+                <div>
+                    <Button
+                        icon={<BsFileBarGraph />}
+                        active={location.pathname.includes('summary')}
+                        onClick={() => handleNavigate(`summary`)}
+                        className={`w-full mb-2 justify-start`}
+                    >
+                        Summary
+                    </Button>
+                </div>
                 <div>
                     <Button
                         icon={<Kanban />}
