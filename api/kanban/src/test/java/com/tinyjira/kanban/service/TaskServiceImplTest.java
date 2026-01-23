@@ -56,6 +56,9 @@ class TaskServiceImplTest {
         request.setSprintId(1L);
         request.setPriority(Priority.MEDIUM);
 
+        User creator = User.builder().email("creator@test.com").build();
+        creator.setId(1L);
+
         BoardColumn column = new BoardColumn();
         column.setId(1L);
         Board board = new Board();
@@ -75,7 +78,7 @@ class TaskServiceImplTest {
         });
 
         // When
-        TaskDetailResponse response = taskService.createTask(request);
+        TaskDetailResponse response = taskService.createTask(request, creator);
 
         // Then
         assertNotNull(response);
@@ -96,6 +99,9 @@ class TaskServiceImplTest {
         request.setBoardId(1L);
         request.setSprintId(1L);
 
+        User creator = User.builder().email("creator@test.com").build();
+        creator.setId(1L);
+
         when(boardColumnRepository.findById(1L)).thenReturn(Optional.of(new BoardColumn()));
         when(boardRepository.findById(1L)).thenReturn(Optional.of(new Board()));
         when(sprintRepository.findById(1L)).thenReturn(Optional.of(new Sprint()));
@@ -104,7 +110,7 @@ class TaskServiceImplTest {
         when(taskRepository.save(any(Task.class))).thenAnswer(i -> i.getArgument(0));
 
         // When
-        taskService.createTask(request);
+        taskService.createTask(request, creator);
 
         // Then
         ArgumentCaptor<Task> taskCaptor = ArgumentCaptor.forClass(Task.class);

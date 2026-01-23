@@ -1,5 +1,5 @@
-import{ createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import {User} from "../types/auth.types.ts";
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User } from "../types/auth.types.ts";
 import { logoutService } from "../services/auth.service";
 
 interface AuthContextType {
@@ -7,6 +7,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     login: (userData: User, accessToken: string, refreshToken: string) => void;
     logout: () => void;
+    setUser: (userData: User) => void;
 }
 
 
@@ -35,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         initAuth();
     }, []);
 
-    const login = ( userData: User, accessToken: string, refreshToken: string) => {
+    const login = (userData: User, accessToken: string, refreshToken: string) => {
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
 
@@ -56,11 +57,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const updateUser = (userData: User) => {
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+    };
+
     if (isInitializing) {
         return <div className="p-4 text-center">Đang tải dữ liệu...</div>;
     }
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
+        <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, setUser: updateUser }}>
             {children}
         </AuthContext.Provider>
     );

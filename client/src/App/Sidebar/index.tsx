@@ -1,4 +1,4 @@
-import {Button} from "../../Components/Button";
+import { Button } from "../../Components/Button";
 import Title from "./Title";
 import {
     Settings,
@@ -9,18 +9,18 @@ import {
     Issues,
 } from "./Icons";
 import Item from "./Item.tsx";
-import {Modal} from "../../Components/Modal.tsx";
-import {useEffect, useState} from "react";
-import {User} from "../../types";
-import {Link, useNavigate, useParams} from "react-router-dom";
+import { Modal } from "../../Components/Modal.tsx";
+import { useEffect, useState } from "react";
+import { User } from "../../types";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { userService } from "../../services/user.service.tsx";
 import { toast } from "react-toastify";
-import {FaList} from "react-icons/fa";
+import { FaList } from "react-icons/fa";
 import { useProjectPermissions } from "../../hooks/useProjectPermissions";
 import { CiLogout } from "react-icons/ci";
 import axiosClient from "../../api";
-import {useAuth} from "../../context/AuthContext.tsx";
+import { useAuth } from "../../context/AuthContext.tsx";
 
 interface ProfileFormInputs {
     fullName: string;
@@ -40,7 +40,6 @@ export const Sidebar = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const { isProjectManager } = useProjectPermissions();
     const { setUser } = useAuth();
-    const [avatarTimestamp, setAvatarTimestamp] = useState(Date.now());
 
     const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProfileFormInputs>();
 
@@ -53,7 +52,8 @@ export const Sidebar = () => {
     const fetchUserData = async () => {
         setIsLoading(true);
         try {
-            const user = await userService.getMe() ;
+            const response = await userService.getMe();
+            const user = response.data || response;
             setCurrentUser(user);
             setValue("fullName", user.fullName || "");
             setValue("email", user.email || "");
@@ -84,15 +84,17 @@ export const Sidebar = () => {
             // Gọi API và nhận về thông tin user mới nhất (bao gồm avatarUrl mới)
             const response: any = await userService.updateProfile(formData);
             const updatedUser = response.data || response;
-            
+
             // Cập nhật Global State để Title và các nơi khác đổi avatar ngay lập tức
-            if (setUser) setUser(updatedUser);
+            if (setUser) {
+                setUser(updatedUser);
+            }
 
             toast.success("Profile updated successfully!");
-            
-            setAvatarTimestamp(Date.now()); // Force refresh image
+
+            // Reload current user data to ensure consistency
             await fetchUserData();
-            
+
         } catch (error) {
             console.error("Update failed:", error);
             toast.error("Failed to update profile");
@@ -118,63 +120,63 @@ export const Sidebar = () => {
         <div
             className="border-r font-CircularStdBold text-sm border-r-solid leading-[1.2] border-r-[#dfe1e6] bg-[#f4f5f7] min-w-[230px] w-[230px] flex flex-col items-center h-full justify-between pb-4">
             {/* Removed px-4 from parent container to allow full-width hover */}
-            
+
             <div className="w-full flex flex-col items-center">
                 <div className="w-full px-4">
-                    <Title className="cursor-pointer" onClick={() => setIsOpen(true)} avatarTimestamp={avatarTimestamp}/>
+                    <Title className="cursor-pointer" onClick={() => setIsOpen(true)} />
                 </div>
-                
-                <Item/>
-                
+
+                <Item />
+
                 <Link to="/projects" className="w-full px-2">
                     <Button icon={<FaList />} className="w-full justify-start mb-2">All Projects</Button>
                 </Link>
-                
+
                 {isProjectManager && (
                     <div className="w-full px-2">
-                        <Button 
-                            icon={<Settings/>} 
+                        <Button
+                            icon={<Settings />}
                             className={NOT_IMPLEMENTED}
                         >
                             Project Settings
                         </Button>
                     </div>
                 )}
-                
+
                 <div className="h-10 w-full flex flex-col justify-center px-4">
                     <div className="bg-[#c1c7d0] h-[1px] w-full"></div>
                 </div>
-                
+
                 <div className="w-full px-2 flex flex-col gap-1">
                     <Button
                         className={`after:content-['Releases'] ${NOT_IMPLEMENTED}`}
-                        icon={<Releases/>}
+                        icon={<Releases />}
                     />
                     <Button
                         className={`after:content-['Issues_and_filters'] ${NOT_IMPLEMENTED}`}
-                        icon={<Issues/>}
+                        icon={<Issues />}
                     />
                     <Button
                         className={`after:content-['Pages'] ${NOT_IMPLEMENTED}`}
-                        icon={<Pages/>}
+                        icon={<Pages />}
                     ></Button>
                     <Button
                         className={``}
-                        icon={<Stats/>}
+                        icon={<Stats />}
                         onClick={() => navigate(`/project/${projectId}/dashboard`)}
                     >
                         Reports
                     </Button>
                     <Button
                         className={`after:content-['Components'] ${NOT_IMPLEMENTED}`}
-                        icon={<Component/>}
+                        icon={<Component />}
                     />
                 </div>
             </div>
 
             <div className="w-full px-2">
-                <Button 
-                    icon={<CiLogout size={20} />} 
+                <Button
+                    icon={<CiLogout size={20} />}
                     onClick={handleLogout}
                     className="w-full justify-start text-red-600 hover:bg-red-50"
                 >
@@ -191,7 +193,7 @@ export const Sidebar = () => {
                     <div className="mb-4 flex items-center gap-4">
                         {currentUser?.avatarUrl && (
                             <img
-                                src={`${currentUser.avatarUrl}?t=${avatarTimestamp}`}
+                                src={currentUser.avatarUrl}
                                 alt="Avatar"
                                 className="w-16 h-16 rounded-full object-cover border border-gray-200"
                             />

@@ -1,10 +1,9 @@
-import {useAuth} from "../../context/AuthContext.tsx";
-import {HTMLAttributes} from "react";
+import { useAuth } from "../../context/AuthContext.tsx";
+import { HTMLAttributes } from "react";
 
 interface TitleProps extends HTMLAttributes<HTMLDivElement> {
-    avatarTimestamp?: number;
 }
-export default function Title({ className, avatarTimestamp, ...props }: TitleProps) {
+export default function Title({ className, ...props }: TitleProps) {
     const { user } = useAuth();
 
 
@@ -22,12 +21,12 @@ export default function Title({ className, avatarTimestamp, ...props }: TitlePro
 
     return (
         <div className={`cursor-pointer flex flex-row items-center w-full h-fit py-6 px-4 ${className}`}
-             {...props}>
+            {...props}>
             {/* Avatar User */}
             <div className="size-10 min-w-[40px] rounded-full overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center bg-indigo-500 text-white font-bold text-lg">
                 {user.avatarUrl ? (
                     <img
-                        src={`${user.avatarUrl}${avatarTimestamp ? `?t=${avatarTimestamp}` : ''}`}
+                        src={user.avatarUrl}
                         alt={user.name}
                         className="w-full h-full object-cover"
                     />
