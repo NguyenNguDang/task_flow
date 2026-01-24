@@ -181,13 +181,11 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
                         {isExpanded ? <FaRegFolderOpen /> : <FaRegFolder />}
                     </div>
 
-                    <Link 
-                        to={`/project/${project.id}/dashboard`}
-                        className="font-medium text-sm truncate hover:underline"
-                        onClick={(e) => e.stopPropagation()}
+                    <span 
+                        className="font-medium text-sm truncate"
                     >
                         {project.name}
-                    </Link>
+                    </span>
                 </div>
 
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

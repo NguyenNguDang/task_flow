@@ -11,4 +11,6 @@ public interface SprintHistoryRepository extends JpaRepository<SprintHistory, Lo
     Optional<SprintHistory> findBySprintIdAndRecordDate(Long sprintId, LocalDate recordDate);
     
     List<SprintHistory> findBySprintIdOrderByRecordDateAsc(Long sprintId);
+
+    boolean existsBySprintIdAndRecordDate(Long sprintId, LocalDate recordDate);
 }

@@ -5,11 +5,9 @@ import com.tinyjira.kanban.DTO.request.SprintRequest;
 import com.tinyjira.kanban.DTO.response.ProjectDetailResponse;
 import com.tinyjira.kanban.DTO.response.SprintReportResponse;
 import com.tinyjira.kanban.exception.ResourceNotFoundException;
-import com.tinyjira.kanban.model.Board;
-import com.tinyjira.kanban.model.Sprint;
-import com.tinyjira.kanban.model.Task;
-import com.tinyjira.kanban.model.User;
+import com.tinyjira.kanban.model.*;
 import com.tinyjira.kanban.repository.BoardRepository;
+import com.tinyjira.kanban.repository.SprintHistoryRepository;
 import com.tinyjira.kanban.repository.SprintRepository;
 import com.tinyjira.kanban.repository.TaskRepository;
 import com.tinyjira.kanban.service.SprintService;
@@ -20,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,6 +31,7 @@ public class SprintServiceImpl implements SprintService {
     private final BoardRepository boardRepository;
     private final TaskRepository taskRepository;
     private final MvpScoringStrategy mvpScoringStrategy;
+    private final SprintHistoryRepository sprintHistoryRepository;
     
     
     @Override
@@ -60,8 +60,22 @@ public class SprintServiceImpl implements SprintService {
     }
     
     @Override
-    public void updateSprint(Long id, SprintRequest sprint) {
-    
+    public void updateSprint(Long id, SprintRequest sprintRequest) {
+        Sprint sprint = getSprintById(id);
+        
+        if (sprintRequest.getName() != null) {
+            sprint.setName(sprintRequest.getName());
+        }
+        
+        if (sprintRequest.getStartDate() != null) {
+            sprint.setStartDate(sprintRequest.getStartDate().atStartOfDay());
+        }
+        
+        if (sprintRequest.getEndDate() != null) {
+            sprint.setEndDate(sprintRequest.getEndDate().atStartOfDay());
+        }
+        
+        sprintRepository.save(sprint);
     }
     
     @Override
@@ -73,43 +87,6 @@ public class SprintServiceImpl implements SprintService {
     @Override
     public List<SprintDTO> getAllSprintsByBoardId(Long boardId) {
         // Lấy tất cả sprint, bao gồm cả COMPLETED để hiển thị trong report
-        List<Sprint> sprints = sprintRepository.findByBoardIdAndStatusNot(boardId, null); 
-        // Hoặc dùng findByBoardId nếu repository hỗ trợ
-        // Tuy nhiên, logic cũ là findByBoardIdAndStatusNot(..., COMPLETED) để ẩn sprint đã xong ở Backlog
-        // Nên ta cần tách API hoặc sửa API này.
-        // Ở đây tôi sẽ sửa để trả về tất cả sprint thuộc board, client sẽ tự filter nếu cần.
-        // Nhưng để an toàn cho Backlog view, ta nên tạo method riêng hoặc dùng param.
-        // Tạm thời sửa lại query trong repository hoặc dùng method khác.
-        
-        // Cách tốt nhất: Sửa lại method này để trả về tất cả sprint (cho Report), 
-        // và tạo method mới getActiveSprintsByBoardId (cho Backlog).
-        // Nhưng để nhanh, tôi sẽ dùng findAllByBoardId nếu có, hoặc sửa logic hiện tại.
-        
-        // Hiện tại repository có: findByBoardIdAndStatusNot
-        // Tôi sẽ sửa lại logic ở đây để trả về tất cả sprint của board.
-        // Nhưng Backlog đang dùng API này để hiển thị list sprint. Nếu trả về cả completed sprint thì Backlog sẽ hiện cả sprint đã xong.
-        // Backlog UI thường chỉ hiện Active và Future sprints.
-        
-        // Giải pháp: Thêm param `includeCompleted` vào API.
-        // Nhưng interface không cho phép đổi signature dễ dàng mà không ảnh hưởng controller.
-        
-        // Tạm thời: Tôi sẽ giả định API này dùng chung và client sẽ filter.
-        // Tuy nhiên, Backlog component hiện tại gọi API này.
-        
-        // Để an toàn, tôi sẽ dùng method findByBoardId (cần thêm vào repo) hoặc filter thủ công.
-        // Nhưng repo chưa có findByBoardId.
-        
-        // Tôi sẽ sửa lại logic: Trả về tất cả sprint.
-        // Client Backlog cần filter `status !== 'COMPLETED'`.
-        // Client Report cần tất cả.
-        
-        // Tuy nhiên, xem lại SprintRepository:
-        // List<Sprint> findByBoardIdAndStatusNot(Long boardId, SprintStatus status);
-        
-        // Nếu tôi truyền status = null vào statusNot, liệu nó có trả về tất cả?
-        // JPA thường ignore null hoặc lỗi.
-        
-        // Tôi sẽ thêm method findByBoardId vào Repository.
         return sprintRepository.findAll().stream()
                 .filter(s -> s.getBoard().getId().equals(boardId))
                 .map(this::toSprintDTO)
@@ -137,6 +114,31 @@ public class SprintServiceImpl implements SprintService {
         Sprint sprint = getSprintById(id);
         sprint.start();
         sprintRepository.save(sprint);
+
+        // Ghi lại lịch sử ban đầu cho Burndown Chart
+        Double totalEstimate = taskRepository.sumRemainingEstimateBySprintId(id);
+        if (totalEstimate == null) totalEstimate = 0.0;
+
+        LocalDate today = LocalDate.now();
+        
+        // Kiểm tra xem đã có bản ghi cho ngày hôm nay chưa
+        Optional<SprintHistory> existingHistory = sprintHistoryRepository.findBySprintIdAndRecordDate(id, today);
+        
+        if (existingHistory.isPresent()) {
+            // Nếu đã có, cập nhật lại
+            SprintHistory history = existingHistory.get();
+            history.setRemainingHours(totalEstimate);
+            sprintHistoryRepository.save(history);
+        } else {
+            // Nếu chưa có, tạo mới
+            SprintHistory history = SprintHistory.builder()
+                    .sprint(sprint)
+                    .recordDate(today)
+                    .remainingHours(totalEstimate)
+                    .completedHours(0.0)
+                    .build();
+            sprintHistoryRepository.save(history);
+        }
     }
     
     @Override

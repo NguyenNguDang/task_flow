@@ -42,6 +42,7 @@ export interface Task {
     storyPoint?: number;
 
     priority: string;
+    updatedAt?: string; // Added updatedAt
 }
 
 export interface TaskCard {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Task } from "../../../../types";
 import { TaskItem } from "../TaskItem";
 import { Button } from "../../../../Components/Button.tsx";
@@ -7,27 +7,64 @@ import { HiUserCircle } from "react-icons/hi";
 import { CiCalendarDate } from "react-icons/ci";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import TaskDetailModal from "../../Board/TaskDetailModal";
+import axiosClient from "../../../../api";
+import { useParams } from "react-router-dom";
+import { createPortal } from "react-dom";
 
 interface BacklogSectionProps {
     tasks: Task[];
     renderPriority: (priority: string) => React.ReactNode;
-    onCreateTask: (title: string) => void;
+    onCreateTask: (title: string, dueDate?: string, assigneeId?: number) => void;
     onUpdateTask?: (taskId: number, updates: Partial<Task>) => void;
     onDeleteTask?: (taskId: number) => void;
 }
 
+interface UserInfo {
+    id: number;
+    fullName: string;
+    avatarUrl: string | null;
+}
+
 export const BacklogSection = ({ tasks, renderPriority, onCreateTask, onUpdateTask, onDeleteTask }: BacklogSectionProps) => {
+    const { projectId } = useParams();
     const [isCreating, setIsCreating] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState("");
     const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
+    // Create Task Options
+    const [dueDate, setDueDate] = useState<string>("");
+    const [assigneeId, setAssigneeId] = useState<number | undefined>(undefined);
+    const [showAssigneeMenu, setShowAssigneeMenu] = useState(false);
+    const [projectMembers, setProjectMembers] = useState<UserInfo[]>([]);
+    const assigneeButtonRef = useRef<HTMLSpanElement>(null);
+    const assigneeMenuRef = useRef<HTMLDivElement>(null);
+    const [assigneeMenuPosition, setAssigneeMenuPosition] = useState({ top: 0, left: 0 });
+
+    useEffect(() => {
+        if (showAssigneeMenu && projectMembers.length === 0) {
+            const fetchMembers = async () => {
+                try {
+                    const res = await axiosClient.get(`/projects/${projectId}/members`) as UserInfo[];
+                    setProjectMembers(res);
+                } catch (e) {
+                    console.error("Failed to fetch members", e);
+                }
+            };
+            fetchMembers();
+        }
+    }, [showAssigneeMenu, projectId]);
+
     const handleStartCreate = () => {
         setIsCreating(true);
+        setDueDate("");
+        setAssigneeId(undefined);
     };
 
     const handleCancelCreate = () => {
         setIsCreating(false);
         setNewTaskTitle("");
+        setDueDate("");
+        setAssigneeId(undefined);
     };
 
     const handleSubmitCreate = () => {
@@ -35,10 +72,10 @@ export const BacklogSection = ({ tasks, renderPriority, onCreateTask, onUpdateTa
             handleCancelCreate();
             return;
         }
-        onCreateTask(newTaskTitle);
+        onCreateTask(newTaskTitle, dueDate || undefined, assigneeId);
         setNewTaskTitle("");
-        // Keep creating mode open or close it? Usually close it or keep focus.
-        // Let's keep focus for rapid entry, but here we just clear title.
+        setDueDate("");
+        setAssigneeId(undefined);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -47,6 +84,38 @@ export const BacklogSection = ({ tasks, renderPriority, onCreateTask, onUpdateTa
         } else if (e.key === 'Escape') {
             handleCancelCreate();
         }
+    };
+
+    const handleAssigneeClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (assigneeButtonRef.current) {
+            const rect = assigneeButtonRef.current.getBoundingClientRect();
+            setAssigneeMenuPosition({
+                top: rect.bottom + window.scrollY + 5,
+                left: rect.left + window.scrollX
+            });
+            setShowAssigneeMenu(!showAssigneeMenu);
+        }
+    };
+
+    const handleSelectAssignee = (user: UserInfo) => {
+        setAssigneeId(user.id);
+        setShowAssigneeMenu(false);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (assigneeMenuRef.current && !assigneeMenuRef.current.contains(event.target as Node) &&
+                assigneeButtonRef.current && !assigneeButtonRef.current.contains(event.target as Node)) {
+                setShowAssigneeMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const getSelectedAssignee = () => {
+        return projectMembers.find(u => u.id === assigneeId);
     };
 
     return (
@@ -120,24 +189,77 @@ export const BacklogSection = ({ tasks, renderPriority, onCreateTask, onUpdateTa
                                         value={newTaskTitle}
                                         onChange={(e) => setNewTaskTitle(e.target.value)}
                                         onKeyDown={handleKeyDown}
-                                        onBlur={() => {
-                                            if(!newTaskTitle) setIsCreating(false);
-                                        }}
                                     />
-                                    <div className="flex items-center gap-2 text-gray-400">
-                                        <span className="hover:bg-gray-200 p-1 rounded cursor-pointer" title='Due date'><CiCalendarDate size={30} color={"black"}/></span>
-                                        <span className="hover:bg-gray-200 p-1 rounded cursor-pointer" title="Assignee"><HiUserCircle size={30} /></span>
-                                        <span> <Button icon={<MdSubdirectoryArrowLeft />}>Create</Button> </span>
+                                    <div className="flex items-center gap-2 text-gray-400 relative">
+                                        <span className="hover:bg-gray-200 p-1 rounded cursor-pointer relative" title='Due date'>
+                                            <input 
+                                                type="date" 
+                                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                                onChange={(e) => setDueDate(e.target.value)}
+                                            />
+                                            <CiCalendarDate size={24} color={dueDate ? "blue" : "black"}/>
+                                        </span>
+                                        
+                                        <span 
+                                            ref={assigneeButtonRef}
+                                            className="hover:bg-gray-200 p-1 rounded cursor-pointer" 
+                                            title="Assignee"
+                                            onClick={handleAssigneeClick}
+                                        >
+                                            {assigneeId ? (
+                                                <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold uppercase">
+                                                    {getSelectedAssignee()?.fullName.charAt(0)}
+                                                </div>
+                                            ) : (
+                                                <HiUserCircle size={24} />
+                                            )}
+                                        </span>
+
+                                        <span onClick={handleSubmitCreate}> 
+                                            <Button icon={<MdSubdirectoryArrowLeft />}>Create</Button> 
+                                        </span>
                                     </div>
                                 </div>
-                                <div className="text-[11px] text-gray-500 mt-1 ml-1">
-                                    Press <span className="font-bold">Enter</span> to create, <span className="font-bold">Esc</span> to cancel
+                                <div className="text-[11px] text-gray-500 mt-1 ml-1 flex justify-between">
+                                    <span>Press <span className="font-bold">Enter</span> to create, <span className="font-bold">Esc</span> to cancel</span>
+                                    {dueDate && <span className="text-blue-600">Due: {dueDate}</span>}
                                 </div>
                             </div>
                         )}
                     </div>
                 )}
             </Droppable>
+
+            {/* Assignee Dropdown Portal */}
+            {showAssigneeMenu && createPortal(
+                <div
+                    ref={assigneeMenuRef}
+                    style={{
+                        top: assigneeMenuPosition.top,
+                        left: assigneeMenuPosition.left,
+                        position: 'absolute',
+                        zIndex: 9999
+                    }}
+                    className="bg-white shadow-xl rounded-md border border-gray-200 w-48 max-h-60 overflow-y-auto animate-in fade-in zoom-in duration-200"
+                >
+                    <div className="p-2 text-xs font-bold text-gray-500 border-b bg-gray-50 sticky top-0">Assign to...</div>
+                    {projectMembers.map(user => (
+                        <div
+                            key={user.id}
+                            className="flex items-center gap-2 p-2 hover:bg-blue-50 cursor-pointer text-sm transition-colors"
+                            onClick={() => handleSelectAssignee(user)}
+                        >
+                            <img
+                                src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=random`}
+                                alt={user.fullName}
+                                className="w-6 h-6 rounded-full border border-gray-200"
+                            />
+                            <span className="truncate">{user.fullName}</span>
+                        </div>
+                    ))}
+                </div>,
+                document.body
+            )}
 
             {/* --- TASK DETAIL MODAL --- */}
             {selectedTaskId && (

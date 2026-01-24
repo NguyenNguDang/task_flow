@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class StorageConfig {
-    
     @Value("${app.storage.type}")
     private String storageType;
     

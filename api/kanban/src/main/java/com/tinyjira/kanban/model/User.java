@@ -22,8 +22,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class User extends AbstractEntity<Long> implements UserDetails {
     private String name;
     
-    private String lastname;
-    
     private String email;
     
     private String password;

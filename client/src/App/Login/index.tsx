@@ -5,6 +5,7 @@ import { loginService } from "../../services/auth.service";
 import { LoginPayload } from "../../types/auth.types";
 import {toast} from "react-toastify";
 import {useAuth} from "../../context/AuthContext.tsx";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const Login = () => {
     const [formData, setFormData] = useState<LoginPayload>({ email: '', password: '' });
@@ -107,9 +108,9 @@ const Login = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white text-xs uppercase font-bold tracking-wider"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white text-lg cursor-pointer z-10"
                             >
-                                {showPassword ? "HIDE" : "SHOW"}
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
 
                             <span className="absolute bottom-0 left-1/2 h-[2px] w-0 -translate-x-1/2 bg-gradient-to-r from-cyan-400 to-indigo-500 transition-all peer-focus:w-full"></span>

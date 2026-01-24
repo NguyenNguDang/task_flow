@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+
 #root,
 html,
 body {
@@ -69,5 +70,14 @@ body {
     }
   }
 
+}
 
+/* Ẩn icon show password mặc định của trình duyệt */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+input[type="password"]::-webkit-textfield-decoration-container {
+    display: none;
 }

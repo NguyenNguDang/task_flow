@@ -171,33 +171,6 @@ const ActivityItem = ({ item }: { item: Activity }) => (
     </div>
 );
 
-const WorkTypeItem = ({ item, total }: { item: ChartData, total: number }) => {
-    const percentage = total > 0 ? (item.value / total) * 100 : 0;
-    
-    // Map icon based on label
-    let icon = <FaTasks className="text-gray-500" size={16} />;
-    if (item.label.toLowerCase() === 'task') icon = <FaCheckCircle className="text-blue-500" size={16} />;
-    else if (item.label.toLowerCase() === 'subtask') icon = <FaTasks className="text-cyan-500" size={16} />;
-    else if (item.label.toLowerCase() === 'epic') icon = <FaBolt className="text-purple-500" size={16} />;
-    else if (item.label.toLowerCase() === 'bug') icon = <FaBug className="text-red-500" size={16} />;
-
-    return (
-        <div className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
-            <div className="flex items-center gap-2 w-24 flex-shrink-0">
-                {icon}
-                <span className="text-sm font-medium text-gray-700">{item.label}</span>
-            </div>
-            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                    className="h-full bg-blue-600 rounded-full" 
-                    style={{ width: `${percentage}%` }}
-                ></div>
-            </div>
-            <div className="text-sm font-bold text-gray-700 w-8 text-right">{item.value}</div>
-        </div>
-    );
-};
-
 const Card = ({ title, linkText, children, className = "", subtitle, subtitleLink }: any) => (
     <div className={`bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col ${className}`}>
         <div className="p-6 border-b border-gray-100">
@@ -276,28 +249,6 @@ const TeamWorkloadCard = ({ data }: { data: WorkloadItem[] }) => (
     </Card>
 );
 
-const EpicProgressEmptyState = () => (
-    <Card 
-        title="Epic progress" 
-        className="h-full"
-    >
-        <div className="h-full flex flex-col items-center justify-center text-center py-8">
-            <div className="mb-4 relative">
-                <div className="flex items-end justify-center gap-1">
-                    <div className="w-8 h-12 bg-blue-100 rounded-sm"></div>
-                    <div className="w-8 h-16 bg-blue-200 rounded-sm"></div>
-                    <div className="w-8 h-10 bg-blue-100 rounded-sm"></div>
-                </div>
-                <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full p-1">
-                    <FaPlusCircle size={12} />
-                </div>
-            </div>
-            <p className="text-sm text-gray-500 mb-2">Use epics to track larger initiatives in your space.</p>
-            <a href="#" className="text-sm font-medium text-blue-600 hover:underline">What is an epic?</a>
-        </div>
-    </Card>
-);
-
 export default function Summary() {
     const { projectId } = useParams();
     const [data, setData] = useState<ProjectSummaryData | null>(null);
@@ -341,8 +292,6 @@ export default function Summary() {
             </div>
         );
     }
-
-    const totalWorkItems = data.typeBreakdown.reduce((acc, item) => acc + item.value, 0);
 
     return (
         <div className="w-full h-full flex flex-col bg-white">
@@ -412,24 +361,8 @@ export default function Summary() {
                                 </div>
                             </Card>
 
-                            <Card title="Types of Work" linkText="View all types">
-                                <div>
-                                    {data.typeBreakdown.length === 0 ? (
-                                        <p className="text-gray-500 text-sm text-center py-4">No work items found.</p>
-                                    ) : (
-                                        data.typeBreakdown.map((type, idx) => (
-                                            <WorkTypeItem key={idx} item={type} total={totalWorkItems} />
-                                        ))
-                                    )}
-                                </div>
-                            </Card>
+                            <TeamWorkloadCard data={data.workload} />
                         </div>
-                    </div>
-
-                    {/* Bottom Section: Workload & Epics */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <TeamWorkloadCard data={data.workload} />
-                        <EpicProgressEmptyState />
                     </div>
                 </div>
             </div>

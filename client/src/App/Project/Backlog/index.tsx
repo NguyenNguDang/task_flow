@@ -12,6 +12,7 @@ import axiosClient from "../../../api";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { taskService } from "../../../services/task.service";
 import { FaArrowUp, FaArrowDown, FaMinus } from "react-icons/fa";
+import { Modal } from "../../../Components/Modal";
 
 export default function Backlog() {
     const [search, setSearch] = useState('');
@@ -21,6 +22,16 @@ export default function Backlog() {
     const { boardId, projectId } = useParams();
     const numericBoardId = Number(boardId);
     const hasActiveSprint = sprints.some(s => s.status?.toLowerCase() === 'active');
+
+    // Start Sprint Modal State
+    const [isStartSprintModalOpen, setIsStartSprintModalOpen] = useState(false);
+    const [sprintToStart, setSprintToStart] = useState<SprintType | null>(null);
+    const [startSprintData, setStartSprintData] = useState({
+        name: '',
+        startDate: '',
+        endDate: '',
+        duration: '2' // Default 2 weeks
+    });
 
     // --- FETCH DATA ---
     useEffect(() => {
@@ -51,13 +62,18 @@ export default function Backlog() {
         }
     }, [numericBoardId]);
 
+    // --- FILTER TASKS BY SEARCH ---
+    const filterTasks = (tasks: Task[]) => {
+        if (!search.trim()) return tasks;
+        return tasks.filter(t => t.title.toLowerCase().includes(search.toLowerCase()));
+    };
 
     const getTasksForSprint = (sprintId: number) => {
-        return allTasks.filter(t => t.sprintId === sprintId);
+        return filterTasks(allTasks.filter(t => t.sprintId === sprintId));
     };
 
     const getBacklogTasks = () => {
-        return allTasks.filter(t => !t.sprintId);
+        return filterTasks(allTasks.filter(t => !t.sprintId));
     };
 
     const renderPriority = (priority: string) => {
@@ -97,22 +113,95 @@ export default function Backlog() {
         setSprints([...sprints, newSprint]);
     };
 
-    const handleStartSprint = async (sprintId: number) => {
-        const currentSprint= sprints.find(s => s.id === sprintId);
-        if(!currentSprint) return;
+    const openStartSprintModal = (sprintId: number) => {
+        const sprint = sprints.find(s => s.id === sprintId);
+        if (!sprint) return;
+
+        const today = new Date().toISOString().split('T')[0];
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 14); // Default 2 weeks
+        const endDateStr = endDate.toISOString().split('T')[0];
+
+        setSprintToStart(sprint);
+        setStartSprintData({
+            name: sprint.name,
+            startDate: today,
+            endDate: endDateStr,
+            duration: '2'
+        });
+        setIsStartSprintModalOpen(true);
+    };
+
+    const handleDurationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const duration = e.target.value;
+        const startDate = new Date(startSprintData.startDate);
+        let endDateStr = startSprintData.endDate;
+
+        if (duration !== 'custom') {
+            const weeks = parseInt(duration);
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + (weeks * 7));
+            endDateStr = endDate.toISOString().split('T')[0];
+        }
+
+        setStartSprintData({
+            ...startSprintData,
+            duration: duration,
+            endDate: endDateStr
+        });
+    };
+
+    const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newStartDate = e.target.value;
+        let endDateStr = startSprintData.endDate;
+
+        if (startSprintData.duration !== 'custom') {
+            const weeks = parseInt(startSprintData.duration);
+            const startDate = new Date(newStartDate);
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + (weeks * 7));
+            endDateStr = endDate.toISOString().split('T')[0];
+        }
+
+        setStartSprintData({
+            ...startSprintData,
+            startDate: newStartDate,
+            endDate: endDateStr
+        });
+    };
+
+    const handleConfirmStartSprint = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!sprintToStart) return;
 
         try {
-            await axios.patch(`${BACKEND_URL}/sprint/${sprintId}/start`)
+            // Update sprint details first (name, dates)
+            await axiosClient.put(`/sprint/${sprintToStart.id}`, {
+                name: startSprintData.name,
+                startDate: startSprintData.startDate,
+                endDate: startSprintData.endDate
+            });
+
+            // Then start the sprint
+            await axios.patch(`${BACKEND_URL}/sprint/${sprintToStart.id}/start`);
+
             const updatedSprints = sprints.map(s => {
-                if (s.id === sprintId) {
-                    return { ...s, status: "active" };
+                if (s.id === sprintToStart.id) {
+                    return { 
+                        ...s, 
+                        status: "active",
+                        name: startSprintData.name,
+                        startDate: startSprintData.startDate,
+                        endDate: startSprintData.endDate
+                    };
                 }
                 return s;
             });
 
             setSprints(updatedSprints);
-            toast.success(`Sprint "${currentSprint.name}" has started!`);
-        }catch (error) {
+            toast.success(`Sprint "${startSprintData.name}" has started!`);
+            setIsStartSprintModalOpen(false);
+        } catch (error) {
             console.error("Failed to start sprint:", error);
             toast.error("Failed to start sprint. Please try again.");
         }
@@ -142,15 +231,22 @@ export default function Backlog() {
         }
     };
 
-    const handleCreateTask = async (sprintId: number | null, title: string) => {
+    const handleCreateTask = async (sprintId: number | null, title: string, dueDate?: string, assigneeId?: number) => {
         try {
+            // Fetch columns to get the first column ID
+            const columnsRes = await axiosClient.get(`/boards/${numericBoardId}/columns`);
+            const columns = (columnsRes as any);
+            const firstColumnId = columns.length > 0 ? columns[0].id : 1; 
+
             const payload = {
                 sprintId: sprintId,
                 title: title,
-                columnId: 1, // Default to first column (TODO) - Backend should handle this better or fetch columns first
+                columnId: firstColumnId, 
                 projectId: Number(projectId),
                 boardId: numericBoardId,
-                priority: 'medium'
+                priority: 'medium',
+                dueDate: dueDate,
+                assigneeId: assigneeId
             }
             const response = await axiosClient.post(`/tasks`, payload);
             const createdTask = (response as any).data; 
@@ -253,9 +349,9 @@ export default function Backlog() {
     if (loading) return <div>Loading board...</div>;
 
     return (
-        <div className="w-screen">
+        <div className="w-screen h-full overflow-y-auto custom-scrollbar">
             <MenuHeader/>
-            <div className="p-8 h-full w-full overflow-y-hidden bg-white">
+            <div className="p-8 h-full w-full bg-white">
                 {/* --- HEADER --- */}
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
@@ -287,9 +383,9 @@ export default function Backlog() {
                                 startDate={sprint.startDate}
                                 endDate={sprint.endDate}
                                 isAnySprintActive={hasActiveSprint}
-                                onStartSprint={handleStartSprint}
+                                onStartSprint={openStartSprintModal}
                                 onCompleteSprint={handleCompleteSprint}
-                                onCreateTask={(title) => handleCreateTask(sprint.id, title)}
+                                onCreateTask={(title, dueDate, assigneeId) => handleCreateTask(sprint.id, title, dueDate, assigneeId)}
                                 onDeleteSprint={handleDeleteSprint}
                                 onUpdateSprint={handleUpdateSprint}
                                 onUpdateTask={handleUpdateTask}
@@ -303,12 +399,90 @@ export default function Backlog() {
                         <BacklogSection
                             tasks={getBacklogTasks()}
                             renderPriority={renderPriority}
-                            onCreateTask={(title) => handleCreateTask(null, title)}
+                            onCreateTask={(title, dueDate, assigneeId) => handleCreateTask(null, title, dueDate, assigneeId)}
                             onUpdateTask={handleUpdateTask}
                             onDeleteTask={handleDeleteTask}
                         />
                     </div>
                 </DragDropContext>
+
+                {/* --- START SPRINT MODAL --- */}
+                {isStartSprintModalOpen && (
+                    <Modal onClose={() => setIsStartSprintModalOpen(false)} className="max-w-md">
+                        <div className="p-2">
+                            <h3 className="text-lg font-bold mb-4 text-[#172b4d]">Start Sprint</h3>
+                            <p className="text-sm text-gray-500 mb-4">{getTasksForSprint(sprintToStart?.id || 0).length} issues will be included in this sprint.</p>
+                            
+                            <form onSubmit={handleConfirmStartSprint} className="flex flex-col gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sprint Name</label>
+                                    <input 
+                                        type="text" 
+                                        className="w-full border-2 border-gray-100 bg-gray-50 rounded px-3 py-2 text-sm focus:bg-white focus:border-blue-500 outline-none transition-colors"
+                                        value={startSprintData.name}
+                                        onChange={(e) => setStartSprintData({...startSprintData, name: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Duration</label>
+                                    <select 
+                                        className="w-full border-2 border-gray-100 bg-gray-50 rounded px-3 py-2 text-sm focus:bg-white focus:border-blue-500 outline-none transition-colors"
+                                        value={startSprintData.duration}
+                                        onChange={handleDurationChange}
+                                    >
+                                        <option value="1">1 week</option>
+                                        <option value="2">2 weeks</option>
+                                        <option value="3">3 weeks</option>
+                                        <option value="4">4 weeks</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Start Date</label>
+                                        <input 
+                                            type="date" 
+                                            className="w-full border-2 border-gray-100 bg-gray-50 rounded px-3 py-2 text-sm focus:bg-white focus:border-blue-500 outline-none transition-colors"
+                                            value={startSprintData.startDate}
+                                            onChange={handleStartDateChange}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">End Date</label>
+                                        <input 
+                                            type="date" 
+                                            className="w-full border-2 border-gray-100 bg-gray-50 rounded px-3 py-2 text-sm focus:bg-white focus:border-blue-500 outline-none transition-colors"
+                                            value={startSprintData.endDate}
+                                            onChange={(e) => setStartSprintData({...startSprintData, endDate: e.target.value, duration: 'custom'})}
+                                            min={startSprintData.startDate}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end gap-2 mt-4">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsStartSprintModalOpen(false)} 
+                                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        type="submit" 
+                                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                                    >
+                                        Start
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </Modal>
+                )}
             </div>
         </div>
 

@@ -24,6 +24,7 @@ interface WorkItem {
         detail: string;
         estimationChange: string;
     };
+    updatedAt?: string;
 }
 
 interface BurndownData {
@@ -57,15 +58,6 @@ const StatusBadge = ({ status }: { status: string }) => {
             {status}
         </span>
     );
-};
-
-const WorkTypeIcon = ({ type }: { type: string }) => {
-    switch (type) {
-        case 'Bug': return <div className="w-4 h-4 bg-red-500 rounded-sm" title="Bug"></div>;
-        case 'Story': return <div className="w-4 h-4 bg-green-500 rounded-sm" title="Story"></div>;
-        case 'Task': return <div className="w-4 h-4 bg-blue-500 rounded-sm" title="Task"></div>;
-        default: return <div className="w-4 h-4 bg-gray-400 rounded-sm"></div>;
-    }
 };
 
 const ReportTable = ({ 
@@ -111,19 +103,6 @@ const ReportTable = ({
                                 </td>
                                 <td className="px-4 py-3 text-gray-800">{item.summary}</td>
                                 <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                        <WorkTypeIcon type={item.workType} />
-                                        <span>{item.workType}</span>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                    {item.epic ? (
-                                        <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-xs font-medium">
-                                            {item.epic}
-                                        </span>
-                                    ) : '-'}
-                                </td>
-                                <td className="px-4 py-3">
                                     <StatusBadge status={item.status} />
                                 </td>
                                 <td className="px-4 py-3">
@@ -163,7 +142,6 @@ const ScopeChangeTable = ({ items }: { items: WorkItem[] }) => {
                             <th className="px-4 py-2">Date</th>
                             <th className="px-4 py-2">Key</th>
                             <th className="px-4 py-2">Summary</th>
-                            <th className="px-4 py-2">Work Type</th>
                             <th className="px-4 py-2">Details</th>
                             <th className="px-4 py-2">Change</th>
                         </tr>
@@ -176,12 +154,6 @@ const ScopeChangeTable = ({ items }: { items: WorkItem[] }) => {
                                     <a href="#" className="text-blue-600 hover:underline font-medium">{item.key}</a>
                                 </td>
                                 <td className="px-4 py-3 text-gray-800">{item.summary}</td>
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                        <WorkTypeIcon type={item.workType} />
-                                        <span>{item.workType}</span>
-                                    </div>
-                                </td>
                                 <td className="px-4 py-3 text-gray-600">{item.scopeChange?.detail}</td>
                                 <td className="px-4 py-3 text-gray-600">{item.scopeChange?.estimationChange}</td>
                             </tr>
@@ -202,8 +174,9 @@ export default function Reports() {
     const [loading, setLoading] = useState(true);
     const [sprintTasks, setSprintTasks] = useState<{
         incomplete: WorkItem[],
-        completed: WorkItem[]
-    }>({ incomplete: [], completed: [] });
+        completed: WorkItem[],
+        outside: WorkItem[]
+    }>({ incomplete: [], completed: [], outside: [] });
 
     // Fetch Sprints
     useEffect(() => {
@@ -274,15 +247,38 @@ export default function Reports() {
                     const currentSprintTasks = tasks.filter((t: any) => String(t.sprintId) === selectedSprintId);
                     console.log("Tasks in current sprint:", currentSprintTasks.length);
                     
-                    const completed = currentSprintTasks
-                        .filter((t: any) => t.status === 'DONE')
-                        .map(mapTaskToWorkItem);
-                        
-                    const incomplete = currentSprintTasks
-                        .filter((t: any) => t.status !== 'DONE')
-                        .map(mapTaskToWorkItem);
+                    const selectedSprint = sprints.find(s => String(s.id) === selectedSprintId);
+                    const sprintStartDate = selectedSprint ? new Date(selectedSprint.startDate) : null;
+                    const sprintEndDate = selectedSprint ? new Date(selectedSprint.endDate) : null;
 
-                    setSprintTasks({ completed, incomplete });
+                    const completed: WorkItem[] = [];
+                    const incomplete: WorkItem[] = [];
+                    const outside: WorkItem[] = [];
+
+                    currentSprintTasks.forEach((t: any) => {
+                        const workItem = mapTaskToWorkItem(t);
+                        const isDone = t.status?.toUpperCase() === 'DONE';
+                        
+                        if (isDone) {
+                            // Check if completed outside sprint
+                            if (sprintStartDate && sprintEndDate && t.updatedAt) {
+                                const completedDate = new Date(t.updatedAt);
+                                // Check if completed BEFORE start or AFTER end
+                                if (completedDate < sprintStartDate || completedDate > sprintEndDate) {
+                                    outside.push(workItem);
+                                } else {
+                                    completed.push(workItem);
+                                }
+                            } else {
+                                // If no dates available, assume inside sprint
+                                completed.push(workItem);
+                            }
+                        } else {
+                            incomplete.push(workItem);
+                        }
+                    });
+
+                    setSprintTasks({ completed, incomplete, outside });
                 } else {
                     console.error("Failed to fetch tasks, status:", tasksRes.status);
                 }
@@ -295,7 +291,7 @@ export default function Reports() {
         };
 
         fetchData();
-    }, [selectedSprintId, boardId]);
+    }, [selectedSprintId, boardId, sprints]);
 
     const mapTaskToWorkItem = (task: any): WorkItem => ({
         id: String(task.id),
@@ -307,10 +303,24 @@ export default function Reports() {
             name: task.assignee?.fullName || task.assigneeName || 'Unassigned',
             avatar: task.assignee?.avatarUrl || task.assigneeAvatar
         },
-        storyPoints: task.estimateHours || task.storyPoint || 0
+        storyPoints: task.estimateHours || task.storyPoint || 0,
+        updatedAt: task.updatedAt
     });
 
     const selectedSprint = sprints.find(s => String(s.id) === selectedSprintId);
+
+    const handleTriggerSnapshot = async () => {
+        try {
+            await axiosClient.post('/sprints/trigger-burndown-snapshot');
+            alert("Snapshot triggered! Refreshing data...");
+            // Refresh data logic here (similar to useEffect)
+            // For brevity, reloading page or re-triggering useEffect via state change is easier
+            window.location.reload();
+        } catch (error) {
+            console.error("Failed to trigger snapshot", error);
+            alert("Failed to trigger snapshot");
+        }
+    };
 
     if (loading) return <div className="p-8">Loading report...</div>;
 
@@ -336,6 +346,12 @@ export default function Reports() {
                     <div className="flex items-center justify-between mb-6">
                         <h1 className="text-2xl font-semibold text-[#172b4d]">Sprint Burndown Chart</h1>
                         <div className="flex items-center gap-4">
+                            <button 
+                                onClick={handleTriggerSnapshot}
+                                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded transition-colors"
+                            >
+                                Refresh Data (Dev)
+                            </button>
                             <a href="#" className="text-sm text-blue-600 hover:underline">How to read this report</a>
                             <button className="p-2 hover:bg-gray-100 rounded text-gray-600">
                                 <IoIosMore size={20} />
@@ -456,7 +472,7 @@ export default function Reports() {
                         <ReportTable 
                             title="Incomplete work" 
                             items={sprintTasks.incomplete} 
-                            columns={['Key', 'Summary', 'Work Type', 'Epic', 'Status', 'Assignee', 'Story Points']}
+                            columns={['Key', 'Summary', 'Status', 'Assignee', 'Story Points']}
                             emptyMessage="All work completed!"
                         />
 
@@ -464,15 +480,15 @@ export default function Reports() {
                         <ReportTable 
                             title="Completed work" 
                             items={sprintTasks.completed} 
-                            columns={['Key', 'Summary', 'Work Type', 'Epic', 'Status', 'Assignee', 'Story Points']}
+                            columns={['Key', 'Summary', 'Status', 'Assignee', 'Story Points']}
                             emptyMessage="No work completed yet."
                         />
 
                         {/* 4.4 Outside Work (Placeholder) */}
                         <ReportTable 
                             title="Work items completed outside of sprint" 
-                            items={[]}
-                            columns={['Key', 'Summary', 'Work Type', 'Epic', 'Status', 'Assignee', 'Story Points']}
+                            items={sprintTasks.outside}
+                            columns={['Key', 'Summary', 'Status', 'Assignee', 'Story Points']}
                             emptyMessage="No work items have been completed outside of the sprint"
                         />
                     </div>

@@ -9,13 +9,15 @@ import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.utils.TaskStatus;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
 import com.tinyjira.kanban.model.Task;
 
-public interface TaskRepository extends CrudRepository<Task, Long> {
+public interface TaskRepository extends CrudRepository<Task, Long>, JpaSpecificationExecutor<Task> {
     
     List<Task> findByBoardColumnOrderByPositionAsc(BoardColumn boardColumn);
     
@@ -84,4 +86,8 @@ public interface TaskRepository extends CrudRepository<Task, Long> {
     // 4. Total tasks in project
     @Query("SELECT COUNT(t) FROM Task t WHERE t.board.project.id = :projectId")
     long countTotalTasksByProjectId(@Param("projectId") Long projectId);
+
+    // --- Burndown Queries ---
+    @Query("SELECT COALESCE(SUM(t.estimateHours), 0) FROM Task t WHERE t.sprint.id = :sprintId AND t.status <> 'DONE'")
+    Double sumRemainingEstimateBySprintId(@Param("sprintId") Long sprintId);
 }

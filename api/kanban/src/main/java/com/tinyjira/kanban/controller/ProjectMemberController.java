@@ -11,6 +11,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @Validated
 @RestController
 @RequiredArgsConstructor
@@ -40,5 +42,16 @@ public class ProjectMemberController {
                                           @AuthenticationPrincipal User requester) {
         projectMemberService.removeMember(projectId, userId, requester);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/transfer-owner")
+    public ResponseEntity<?> transferOwnership(
+            @RequestBody Map<String, Long> request,
+            @AuthenticationPrincipal User currentOwner
+    ) {
+        Long projectId = request.get("projectId");
+        Long newOwnerId = request.get("newOwnerId");
+        projectMemberService.transferOwnership(projectId, newOwnerId, currentOwner);
+        return ResponseEntity.ok("Ownership transferred successfully");
     }
 }

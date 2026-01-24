@@ -55,7 +55,7 @@ public class TaskDetailResponse {
                 .assignee(task.getAssignee() != null ?
                         new UserInfo(task.getAssignee().getId(), task.getAssignee().getName(), task.getAssignee().getAvatarUrl()) : null)
                 .reporter(task.getCreator() != null ?
-                        new UserInfo(task.getCreator().getId(), task.getCreator().getName() + " " + task.getCreator().getLastname(), task.getCreator().getAvatarUrl()) : null)
+                        new UserInfo(task.getCreator().getId(), task.getCreator().getName(), task.getCreator().getAvatarUrl()) : null)
                 .sprint(task.getSprint() != null ?
                         new SprintInfo(task.getSprint().getId(), task.getSprint().getName()) : null)
                 

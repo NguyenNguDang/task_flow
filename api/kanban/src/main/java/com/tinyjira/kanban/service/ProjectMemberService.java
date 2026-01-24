@@ -6,4 +6,5 @@ public interface ProjectMemberService {
     void inviteMember(Long projectId, String email, User inviter);
     void leaveProject(Long projectId, User currentUser);
     void removeMember(Long projectId, Long userId, User requester);
+    void transferOwnership(Long projectId, Long newOwnerId, User currentOwner);
 }

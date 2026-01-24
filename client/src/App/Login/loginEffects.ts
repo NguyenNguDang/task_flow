@@ -40,16 +40,4 @@ export function initLoginEffects() {
             checkmark.style.transform = "scale(1)";
         }, 150);
     });
-
-    // ---------- BUTTON PRESS EFFECT ----------
-    const buttons = document.querySelectorAll("button");
-    buttons.forEach((btn) => {
-        btn.addEventListener("mousedown", () => {
-            (btn as HTMLElement).style.transform = "scale(0.96)";
-        });
-
-        btn.addEventListener("mouseup", () => {
-            (btn as HTMLElement).style.transform = "scale(1)";
-        });
-    });
 }

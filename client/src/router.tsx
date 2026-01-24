@@ -6,7 +6,6 @@ import Home from "./App/Home";
 import Login from "./App/Login";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Register from "./App/Register";
-import ProjectDashboard from "./App/Project/Dashboard";
 import ProjectList from "./App/ProjectList";
 import Welcome from "./App/Welcome";
 import Summary from "./App/Project/Summary";
@@ -44,10 +43,6 @@ export const router = createBrowserRouter([
                     {
                         path: "backlog/:boardId",
                         element: <Backlog />
-                    },
-                    {
-                        path: "dashboard",
-                        element: <ProjectDashboard />
                     },
                     {
                         path: "summary",

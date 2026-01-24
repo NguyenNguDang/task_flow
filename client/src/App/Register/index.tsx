@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AxiosError } from "axios";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const Register = () => {
     const navigate = useNavigate();
@@ -130,9 +131,9 @@ const Register = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white text-xs uppercase font-bold tracking-wider cursor-pointer z-10"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white text-lg cursor-pointer z-10"
                             >
-                                {showPassword ? "HIDE" : "SHOW"}
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
 
                             <span className="absolute bottom-0 left-1/2 h-[2px] w-0 -translate-x-1/2 bg-gradient-to-r from-cyan-400 to-indigo-500 transition-all peer-focus:w-full"></span>

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @Builder
@@ -27,6 +29,9 @@ public class TaskRequest {
     @NotNull(message = "Board Id must be not null!")
     private Long boardId;
     
-    // Allow null for backlog tasks
     private Long sprintId;
+
+    private LocalDate dueDate;
+    
+    private Long assigneeId;
 }

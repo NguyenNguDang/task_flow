@@ -10,11 +10,13 @@ import com.tinyjira.kanban.model.*;
 import com.tinyjira.kanban.repository.*;
 import com.tinyjira.kanban.service.TaskHistoryService;
 import com.tinyjira.kanban.service.TaskService;
+import com.tinyjira.kanban.service.specification.TaskSpecification;
 import com.tinyjira.kanban.utils.Priority;
 import com.tinyjira.kanban.utils.SprintStatus;
 import com.tinyjira.kanban.utils.TaskStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -105,6 +107,7 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public TaskDetailResponse createTask(TaskRequest taskRequest, User creator) {
         Task task = toEntity(taskRequest);
+        log.info("due date and assigneeId {}, {}", taskRequest.getDueDate(), taskRequest.getAssigneeId());
         Double maxPosition = taskRepository.findMaxPositionByBoardColumnId(taskRequest.getColumnId());
         if (maxPosition == null) {
             task.setPosition(1000.0);
@@ -112,7 +115,22 @@ public class TaskServiceImpl implements TaskService {
             task.setPosition(maxPosition + 1000.0);
         }
         task.setStatus(TaskStatus.TODO);
+        
         task.setCreator(creator);
+        
+        task.setStartDate(LocalDateTime.now());
+        
+        // Handle optional fields
+        if (taskRequest.getDueDate() != null) {
+            task.setDueDate(taskRequest.getDueDate().atStartOfDay());
+        }
+        
+        if (taskRequest.getAssigneeId() != null) {
+            User assignee = userRepository.findById(taskRequest.getAssigneeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Assignee not found"));
+            task.setAssignee(assignee);
+        }
+        
         taskRepository.save(task);
         log.info("Created new task!");
         return toDto(task);

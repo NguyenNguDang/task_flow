@@ -10,9 +10,10 @@ import axiosClient from "../../api";
 import {toast} from "react-toastify";
 import { MdDashboard } from "react-icons/md";
 import { FaUsers } from "react-icons/fa";
-import { FaTrash } from "react-icons/fa";
+import { FaTrash, FaExchangeAlt } from "react-icons/fa";
 import { BsFileBarGraph } from "react-icons/bs";
 import { HiOutlineDocumentReport } from "react-icons/hi";
+import { useAuth } from "../../context/AuthContext";
 
 type ModalType = "MENU" | "ADD_PEOPLE" | "USERS" | null;
 
@@ -34,6 +35,8 @@ const MenuHeader = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [projectName, setProjectName] = useState("MY SCUM PROJECT");
     const [projectMembers, setProjectMembers] = useState<UserSummary[]>([]);
+    const [projectOwnerId, setProjectOwnerId] = useState<number | null>(null);
+    const { user } = useAuth();
 
     useEffect(() => {
         const fetchProjectData = async () => {
@@ -45,6 +48,7 @@ const MenuHeader = () => {
 
                     if (currentProject) {
                         setProjectName(currentProject.name);
+                        setProjectOwnerId(currentProject.owner?.id);
                         if (!boardId && currentProject.boards && currentProject.boards.length > 0) {
                             setBoardId(currentProject.boards[0].id);
                         }
@@ -122,6 +126,23 @@ const MenuHeader = () => {
         }
     };
 
+    const handleTransferOwnership = async (newOwnerId: number) => {
+        if (!window.confirm("Are you sure you want to transfer ownership to this member? You will lose owner privileges.")) return;
+
+        try {
+            await axiosClient.post(`/projects-member/transfer-owner`, {
+                projectId: Number(projectId),
+                newOwnerId: newOwnerId
+            });
+            toast.success("Ownership transferred successfully");
+            setProjectOwnerId(newOwnerId); // Update local state
+            fetchProjectMembers(); // Refresh list
+        } catch (error: any) {
+            console.error("Failed to transfer ownership", error);
+            toast.error(error.response?.data?.message || "Failed to transfer ownership");
+        }
+    };
+
     const handleLeaveProject = async () => {
         if (window.confirm("Bạn có chắc chắn muốn rời khỏi dự án này không?")) {
             setIsLoading(true);
@@ -141,10 +162,22 @@ const MenuHeader = () => {
         }
     };
 
+    const isOwner = user?.id === projectOwnerId;
+    // Check if current user is a member (not owner)
+    const isMember = !isOwner && projectMembers.some(m => m.id === user?.id);
+
     return (
         <div className="mx-4 pt-4 pl-4 border-b border-gray-300">
-            <div>
-                <p className={`flex justify-start items-center gap-4 font-bold uppercase`}>{projectName} <span onClick={() => {openModal("MENU")}} className={`rounded cursor-pointer hover:bg-gray-100`}><AiOutlineEllipsis size={40} /></span></p>
+            <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-800 via-blue-800 to-slate-800 drop-shadow-sm">
+                    {projectName}
+                </h1>
+                <span 
+                    onClick={() => {openModal("MENU")}} 
+                    className="rounded-full p-1 cursor-pointer hover:bg-gray-100 text-gray-500 transition-all hover:text-blue-600 mt-1"
+                >
+                    <AiOutlineEllipsis size={28} />
+                </span>
             </div>
             <div className="flex justify-start items-center gap-3 py-4">
                 <div>
@@ -206,7 +239,7 @@ const MenuHeader = () => {
                                coords={{ top: 50, left: 490}}
                                onClose={closeModal}>
                 <div className={`py-5`}>
-                    <p onClick={() => handleNavigate(`dashboard`)} className={`w-full flex items-center gap-2 cursor-pointer hover:bg-gray-100 py-2 px-4`}><MdDashboard />Overview</p>
+                    <p onClick={() => handleNavigate(`summary`)} className={`w-full flex items-center gap-2 cursor-pointer hover:bg-gray-100 py-2 px-4`}><MdDashboard />Summary</p>
                     <p onClick={() => {openModal("ADD_PEOPLE")}} className={`w-full flex items-center gap-2 cursor-pointer hover:bg-gray-100 py-2 px-4`}><FaRegUser />Add people</p>
                     <p onClick={handleLeaveProject} className={`w-full flex items-center gap-2 cursor-pointer hover:bg-gray-100 py-2 px-4`}><CiLogout />Leave project</p>
                 </div>
@@ -250,22 +283,24 @@ const MenuHeader = () => {
                     <h2 className="text-xl font-bold mb-4">Project Members</h2>
                     
                     {/* Add Member Form inside Users Modal */}
-                    <form onSubmit={handleAddPeople} className="flex gap-2 mb-6">
-                        <input
-                            className="flex-grow border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-                            placeholder="Invite by email..."
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            type="email"
-                        />
-                        <button
-                            className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
-                            type="submit"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? "Adding..." : "Add"}
-                        </button>
-                    </form>
+                    {(isOwner || isMember) && (
+                        <form onSubmit={handleAddPeople} className="flex gap-2 mb-6">
+                            <input
+                                className="flex-grow border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                                placeholder="Invite by email..."
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                type="email"
+                            />
+                            <button
+                                className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+                                type="submit"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? "Adding..." : "Add"}
+                            </button>
+                        </form>
+                    )}
 
                     {/* Members List */}
                     <div className="max-h-[400px] overflow-y-auto">
@@ -284,17 +319,33 @@ const MenuHeader = () => {
                                                 )}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-medium text-gray-900">{member.fullName}</p>
+                                                <p className="text-sm font-medium text-gray-900">
+                                                    {member.fullName} 
+                                                    {member.id === projectOwnerId && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Owner</span>}
+                                                </p>
                                                 <p className="text-xs text-gray-500">{member.username}</p>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => handleRemoveMember(member.id)}
-                                            className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors"
-                                            title="Remove member"
-                                        >
-                                            <FaTrash size={14} />
-                                        </button>
+                                        <div className="flex gap-2">
+                                            {isOwner && member.id !== projectOwnerId && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleTransferOwnership(member.id)}
+                                                        className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors"
+                                                        title="Transfer Ownership"
+                                                    >
+                                                        <FaExchangeAlt size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRemoveMember(member.id)}
+                                                        className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors"
+                                                        title="Remove member"
+                                                    >
+                                                        <FaTrash size={14} />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
                                     </li>
                                 ))}
                             </ul>

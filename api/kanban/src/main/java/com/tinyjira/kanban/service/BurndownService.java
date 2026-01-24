@@ -6,6 +6,7 @@ import com.tinyjira.kanban.model.Sprint;
 import com.tinyjira.kanban.model.SprintHistory;
 import com.tinyjira.kanban.repository.SprintHistoryRepository;
 import com.tinyjira.kanban.repository.SprintRepository;
+import com.tinyjira.kanban.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ public class BurndownService {
     
     private final SprintRepository sprintRepository;
     private final SprintHistoryRepository sprintHistoryRepository;
+    private final TaskRepository taskRepository;
     
     public BurndownChartResponse getBurndownData(Long sprintId) {
         Sprint sprint = sprintRepository.findById(sprintId)
@@ -40,7 +42,16 @@ public class BurndownService {
         List<Double> idealData = new ArrayList<>();
         List<Double> actualData = new ArrayList<>();
         
-        double initialEffort = historyList.isEmpty() ? 0 : historyList.get(0).getRemainingHours();
+        // Lấy tổng estimate ban đầu từ bản ghi history đầu tiên, hoặc tính hiện tại nếu chưa có history
+        double initialEffort = 0;
+        if (!historyList.isEmpty()) {
+            initialEffort = historyList.get(0).getRemainingHours();
+        } else {
+             // Fallback: Nếu chưa có history nào, lấy tổng hiện tại (trường hợp vừa tạo sprint chưa start hoặc lỗi)
+             Double currentTotal = taskRepository.sumRemainingEstimateBySprintId(sprintId);
+             initialEffort = currentTotal != null ? currentTotal : 0;
+        }
+
         long totalDays = java.time.temporal.ChronoUnit.DAYS.between(sprint.getStartDate(), sprint.getEndDate()) + 1;
         
         double idealBurnRate = (totalDays > 0) ? (initialEffort / (totalDays - 1)) : 0;
@@ -48,19 +59,34 @@ public class BurndownService {
         LocalDateTime current = sprint.getStartDate();
         int dayIndex = 0;
         
+        // Tính toán dữ liệu thực tế hiện tại (Real-time)
+        Double currentRemaining = taskRepository.sumRemainingEstimateBySprintId(sprintId);
+        if (currentRemaining == null) currentRemaining = 0.0;
+        
         while (!current.isAfter(sprint.getEndDate())) {
-            dates.add(current.toString());
+            dates.add(current.toLocalDate().toString());
             
+            // Ideal Line
             double idealVal = Math.max(0, initialEffort - (idealBurnRate * dayIndex));
-            idealData.add(Math.round(idealVal * 10.0) / 10.0); // Làm tròn 1 số lẻ
+            idealData.add(Math.round(idealVal * 10.0) / 10.0); 
             
-            if (!current.isAfter(LocalDate.now().atStartOfDay())) {
-                Double actualVal = historyMap.getOrDefault(current, null);
+            // Actual Line
+            LocalDate dateKey = current.toLocalDate();
+            if (!dateKey.isAfter(LocalDate.now())) {
+                Double actualVal = historyMap.get(dateKey);
                 
+                // Nếu là ngày hôm nay, ưu tiên lấy dữ liệu realtime từ taskRepository
+                // để phản ánh ngay lập tức thay đổi (Done task) lên biểu đồ
+                if (dateKey.isEqual(LocalDate.now())) {
+                    actualVal = currentRemaining;
+                }
+                
+                // Nếu không có dữ liệu history cho ngày quá khứ, dùng dữ liệu của ngày trước đó (flat line)
                 if (actualVal == null && !actualData.isEmpty()) {
                     actualVal = actualData.get(actualData.size() - 1);
                 }
                 
+                // Nếu vẫn null (ngày đầu tiên mà chưa có history), dùng initialEffort
                 if (actualVal == null) actualVal = initialEffort;
                 
                 actualData.add(actualVal);

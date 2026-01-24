@@ -16,6 +16,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     Optional<User> findByEmail(String username);
 
-    @Query("SELECT u FROM User u JOIN ProjectMember pm ON u.id = pm.user.id WHERE pm.project.id = :projectId")
+    @Query("SELECT DISTINCT u FROM User u " +
+           "LEFT JOIN ProjectMember pm ON u.id = pm.user.id " +
+           "LEFT JOIN Project p ON p.owner.id = u.id " +
+           "WHERE (pm.project.id = :projectId) OR (p.id = :projectId)")
     List<User> findUsersByProjectId(@Param("projectId") Long projectId);
 }
