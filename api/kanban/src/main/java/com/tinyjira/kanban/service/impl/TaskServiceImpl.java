@@ -114,7 +114,13 @@ public class TaskServiceImpl implements TaskService {
         } else {
             task.setPosition(maxPosition + 1000.0);
         }
-        task.setStatus(TaskStatus.TODO);
+        
+        // Set status from request if available, otherwise default to TODO
+        if (taskRequest.getStatus() != null) {
+            task.setStatus(taskRequest.getStatus());
+        } else {
+            task.setStatus(TaskStatus.TODO);
+        }
         
         task.setCreator(creator);
         
@@ -148,7 +154,11 @@ public class TaskServiceImpl implements TaskService {
         User assignee = userRepository.findById(assigneeId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        if (!task.getBoard().getProject().hasMember(assignee)) {
+        // Check if user is project member OR project owner
+        boolean isMember = task.getBoard().getProject().hasMember(assignee);
+        boolean isOwner = task.getBoard().getProject().getOwner().getId().equals(assignee.getId());
+
+        if (!isMember && !isOwner) {
             throw new IllegalArgumentException("User này không thuộc dự án, vui lòng mời vào trước!");
         }
         
@@ -164,7 +174,8 @@ public class TaskServiceImpl implements TaskService {
         eventPublisher.publishEvent(new TaskAssignedEvent(
                 task.getTitle(),
                 assignee.getEmail(),
-                currentUser.getUsername()
+                currentUser.getUsername(),
+                task.getId()
         ));
     
     }

@@ -23,6 +23,7 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
     const [isExpanded, setIsExpanded] = useState(false);
     const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
     const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+    const [isEditBoardOpen, setIsEditBoardOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     
     // Menu state for Project
@@ -41,6 +42,12 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
     const location = useLocation();
     
     const [boardFormData, setBoardFormData] = useState<BoardFormData>({
+        projectId: project.id,
+        title: "",
+        description: "",
+    });
+
+    const [editBoardFormData, setEditBoardFormData] = useState<BoardFormData>({
         projectId: project.id,
         title: "",
         description: "",
@@ -79,7 +86,7 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
         }
     };
 
-    const handleBoardMenuClick = (e: React.MouseEvent, boardId: number) => {
+    const handleBoardMenuClick = (e: React.MouseEvent, board: any) => {
         e.preventDefault();
         e.stopPropagation();
         const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -87,13 +94,23 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
             top: rect.bottom + window.scrollY + 5,
             left: rect.left + window.scrollX
         });
-        setSelectedBoardId(boardId);
+        setSelectedBoardId(board.id);
+        setEditBoardFormData({
+            projectId: project.id,
+            title: board.title,
+            description: board.description || "",
+        });
         setShowBoardMenu(true);
     };
 
     const handleBoardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setBoardFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleEditBoardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setEditBoardFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleProjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,6 +134,23 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
             setIsLoading(false);
         }
     }
+
+    const handleUpdateBoard = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!editBoardFormData.title) return toast.error("Board title is required!");
+
+        setIsLoading(true);
+        try {
+            await axiosClient.put(`/boards/${selectedBoardId}`, editBoardFormData);
+            toast.success("Board updated successfully!");
+            setIsEditBoardOpen(false);
+            onProjectUpdate?.();
+        } catch (error) {
+            toast.error("Failed to update board!");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleUpdateProject = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -240,7 +274,7 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
                                     
                                     <div 
                                         className="opacity-0 group-hover/board:opacity-100 p-1 hover:bg-gray-200 rounded cursor-pointer"
-                                        onClick={(e) => handleBoardMenuClick(e, board.id)}
+                                        onClick={(e) => handleBoardMenuClick(e, board)}
                                     >
                                         <FaEllipsisH size={10} />
                                     </div>
@@ -298,6 +332,15 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
                     className="bg-white shadow-xl rounded-md border border-gray-200 w-32 py-1 animate-in fade-in zoom-in duration-200"
                 >
                     <button 
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        onClick={() => {
+                            setShowBoardMenu(false);
+                            setIsEditBoardOpen(true);
+                        }}
+                    >
+                        <FaEdit size={12} /> Edit Board
+                    </button>
+                    <button 
                         className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                         onClick={() => {
                             handleDeleteBoard();
@@ -352,6 +395,56 @@ const ProjectRow = ({ project, onProjectUpdate }: { project: any, onProjectUpdat
                                     disabled={isLoading}
                                 >
                                     {isLoading ? "Creating..." : "Create Board"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Edit Board Modal */}
+            {isEditBoardOpen && (
+                <Modal onClose={() => setIsEditBoardOpen(false)} className="max-w-md">
+                    <div className="p-1">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Board</h2>
+                        <form onSubmit={handleUpdateBoard} className="flex flex-col gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Board Title</label>
+                                <input 
+                                    value={editBoardFormData.title} 
+                                    onChange={handleEditBoardChange} 
+                                    type="text" 
+                                    name="title" 
+                                    placeholder="e.g. Sprint 1, Kanban Board"
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                    autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                <input 
+                                    value={editBoardFormData.description} 
+                                    onChange={handleEditBoardChange} 
+                                    type="text" 
+                                    name="description" 
+                                    placeholder="Optional description"
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 mt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditBoardOpen(false)}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? "Saving..." : "Save Changes"}
                                 </button>
                             </div>
                         </form>

@@ -9,4 +9,5 @@ public class TaskAssignedEvent {
     private String taskTitle;
     private String assigneeEmail;
     private String assignerName;
+    private Long taskId;
 }

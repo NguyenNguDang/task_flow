@@ -1,6 +1,7 @@
 package com.tinyjira.kanban.DTO.request;
 
 import com.tinyjira.kanban.utils.Priority;
+import com.tinyjira.kanban.utils.TaskStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -34,4 +35,6 @@ public class TaskRequest {
     private LocalDate dueDate;
     
     private Long assigneeId;
+
+    private TaskStatus status;
 }

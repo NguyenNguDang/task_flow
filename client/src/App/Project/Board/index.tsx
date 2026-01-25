@@ -274,13 +274,26 @@ export default function Board() {
 
     //Call api create task
     const handleCreateTask = async (columnId: string, title: string) => {
+        // Determine status based on column title
+        const column = data.columns[columnId];
+        let status = 'TODO'; // Default
+        if (column) {
+            const colTitle = column.title.toLowerCase();
+            if (colTitle === 'done') {
+                status = 'DONE';
+            } else if (colTitle === 'doing' || colTitle === 'in progress') {
+                status = 'DOING';
+            }
+        }
+
         const payload: CreateTaskRequest = {
             title: title,
             columnId: Number(columnId),
             projectId: Number(projectIdParam),
             priority: 'medium',
             boardId: Number(boardIdParam),
-            sprintId: activeSprint?.id || null
+            sprintId: activeSprint?.id || null,
+            status: status // Send status to backend
         };
 
         try {

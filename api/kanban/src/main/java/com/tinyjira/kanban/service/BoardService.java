@@ -12,8 +12,9 @@ public interface BoardService {
     
     List<BoardDTO> getBoards();
     
-    
     BoardDetailResponse getBoardData(Long id);
+
+    BoardDTO updateBoard(Long id, @Valid BoardRequest request);
 
     void deleteBoard(Long id);
 }

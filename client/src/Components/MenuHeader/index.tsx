@@ -9,19 +9,28 @@ import { CiLogout } from "react-icons/ci";
 import axiosClient from "../../api";
 import {toast} from "react-toastify";
 import { MdDashboard } from "react-icons/md";
-import { FaUsers } from "react-icons/fa";
+import { FaUsers, FaBell } from "react-icons/fa";
 import { FaTrash, FaExchangeAlt } from "react-icons/fa";
 import { BsFileBarGraph } from "react-icons/bs";
 import { HiOutlineDocumentReport } from "react-icons/hi";
 import { useAuth } from "../../context/AuthContext";
 
-type ModalType = "MENU" | "ADD_PEOPLE" | "USERS" | null;
+type ModalType = "MENU" | "ADD_PEOPLE" | "USERS" | "NOTIFICATIONS" | null;
 
 interface UserSummary {
     id: number;
     username: string;
     fullName: string;
     avatarUrl: string;
+}
+
+interface Notification {
+    id: number;
+    content: string;
+    isRead: boolean;
+    type: string;
+    referenceLink: string;
+    createdAt: string;
 }
 
 const MenuHeader = () => {
@@ -37,6 +46,8 @@ const MenuHeader = () => {
     const [projectMembers, setProjectMembers] = useState<UserSummary[]>([]);
     const [projectOwnerId, setProjectOwnerId] = useState<number | null>(null);
     const { user } = useAuth();
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
         const fetchProjectData = async () => {
@@ -62,6 +73,21 @@ const MenuHeader = () => {
         fetchProjectData();
     }, [projectId, boardId]);
 
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            const res = await axiosClient.get("/notifications");
+            const notifs = res as unknown as Notification[];
+            setNotifications(notifs);
+            setUnreadCount(notifs.filter(n => !n.isRead).length);
+        } catch (error) {
+            console.error("Failed to fetch notifications", error);
+        }
+    };
+
     const handleNavigate = (path: string) => {
         if (projectId) {
             navigate(`/project/${projectId}/${path}`);
@@ -72,6 +98,9 @@ const MenuHeader = () => {
         setActiveModal(type);
         if (type === "USERS") {
             fetchProjectMembers();
+        }
+        if (type === "NOTIFICATIONS") {
+            fetchNotifications();
         }
     }
     const closeModal = () => setActiveModal(null);
@@ -162,22 +191,49 @@ const MenuHeader = () => {
         }
     };
 
+    const handleMarkAsRead = async (id: number) => {
+        try {
+            await axiosClient.patch(`/notifications/${id}/read`);
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (error) {
+            console.error("Failed to mark notification as read", error);
+        }
+    };
+
     const isOwner = user?.id === projectOwnerId;
     // Check if current user is a member (not owner)
     const isMember = !isOwner && projectMembers.some(m => m.id === user?.id);
 
     return (
         <div className="mx-4 pt-4 pl-4 border-b border-gray-300">
-            <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-800 via-blue-800 to-slate-800 drop-shadow-sm">
-                    {projectName}
-                </h1>
-                <span 
-                    onClick={() => {openModal("MENU")}} 
-                    className="rounded-full p-1 cursor-pointer hover:bg-gray-100 text-gray-500 transition-all hover:text-blue-600 mt-1"
-                >
-                    <AiOutlineEllipsis size={28} />
-                </span>
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-800 via-blue-800 to-slate-800 drop-shadow-sm">
+                        {projectName}
+                    </h1>
+                    <span 
+                        onClick={() => {openModal("MENU")}} 
+                        className="rounded-full p-1 cursor-pointer hover:bg-gray-100 text-gray-500 transition-all hover:text-blue-600 mt-1"
+                    >
+                        <AiOutlineEllipsis size={28} />
+                    </span>
+                </div>
+                
+                {/* Notification Bell */}
+                <div className="relative mr-4">
+                    <button 
+                        onClick={() => openModal("NOTIFICATIONS")}
+                        className="p-2 rounded-full hover:bg-gray-100 text-gray-600 relative"
+                    >
+                        <FaBell size={20} />
+                        {unreadCount > 0 && (
+                            <span className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                {unreadCount}
+                            </span>
+                        )}
+                    </button>
+                </div>
             </div>
             <div className="flex justify-start items-center gap-3 py-4">
                 <div>
@@ -353,6 +409,55 @@ const MenuHeader = () => {
                     </div>
                 </div>
             </Modal>)}
+
+            {/* Notifications Modal */}
+            {activeModal === "NOTIFICATIONS" && (
+                <Modal
+                    className="max-w-[400px] absolute right-4 top-16 !p-0"
+                    coords={{ top: 60, right: 20 }}
+                    onClose={closeModal}
+                    zIndex={9999}
+                >
+                    <div className="flex flex-col max-h-[500px]">
+                        <div className="p-4 border-b border-gray-200">
+                            <h3 className="font-bold text-lg">Notifications</h3>
+                        </div>
+                        <div className="overflow-y-auto flex-1">
+                            {notifications.length === 0 ? (
+                                <div className="p-8 text-center text-gray-500">
+                                    No notifications yet
+                                </div>
+                            ) : (
+                                <ul className="divide-y divide-gray-100">
+                                    {notifications.map((notif) => (
+                                        <li 
+                                            key={notif.id} 
+                                            className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!notif.isRead ? 'bg-blue-50' : ''}`}
+                                            onClick={() => {
+                                                if (!notif.isRead) handleMarkAsRead(notif.id);
+                                                // Optional: Navigate to reference link
+                                                // if (notif.referenceLink) navigate(notif.referenceLink);
+                                            }}
+                                        >
+                                            <div className="flex gap-3">
+                                                <div className="mt-1">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500" style={{ opacity: notif.isRead ? 0 : 1 }}></div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-gray-800">{notif.content}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {new Date(notif.createdAt).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 };

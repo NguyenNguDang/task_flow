@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { FaChevronDown, FaPencilAlt } from "react-icons/fa";
 import axiosClient from "../../../../api";
 import { useParams } from "react-router-dom";
+import { useAuth } from "../../../../context/AuthContext";
 
 interface TaskItemProps {
     task: Task;
@@ -23,6 +24,7 @@ interface UserInfo {
 
 export const TaskItem = ({ task, renderPriority, onUpdateTask, onDeleteTask }: TaskItemProps) => {
     const { projectId } = useParams();
+    const { user: currentUser } = useAuth();
     const [showMenu, setShowMenu] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
     const menuButtonRef = useRef<HTMLDivElement>(null);
@@ -78,7 +80,19 @@ export const TaskItem = ({ task, renderPriority, onUpdateTask, onDeleteTask }: T
             const fetchMembers = async () => {
                 try {
                     const res = await axiosClient.get(`/projects/${projectId}/members`) as UserInfo[];
-                    setProjectMembers(res);
+                    // Also fetch project owner to include in the list if not already there
+                    const projectRes = await axiosClient.get(`/projects/${projectId}`);
+                    const owner = (projectRes as any).owner;
+                    
+                    let allMembers = [...res];
+                    if (owner && !allMembers.some(m => m.id === owner.id)) {
+                        allMembers.push({
+                            id: owner.id,
+                            fullName: owner.name, // Assuming owner object has name
+                            avatarUrl: owner.avatarUrl
+                        });
+                    }
+                    setProjectMembers(allMembers);
                 } catch (e) {
                     console.error("Failed to fetch members", e);
                 }
@@ -151,7 +165,7 @@ export const TaskItem = ({ task, renderPriority, onUpdateTask, onDeleteTask }: T
         if (task.status === newStatus) return;
 
         if (onUpdateTask) {
-            onUpdateTask(task.id, { status: newStatus });
+            onUpdateTask(task.id, { status: newStatus.toUpperCase() });
         } else {
             try {
                 await taskService.update(String(task.id), { status: newStatus.toUpperCase() });
@@ -313,17 +327,17 @@ export const TaskItem = ({ task, renderPriority, onUpdateTask, onDeleteTask }: T
     };
 
     const getStatusBadgeStyles = (status: string) => {
-        switch(status?.toLowerCase()) {
-            case 'done': return 'bg-green-100 text-green-700 hover:bg-green-200';
-            case 'doing': return 'bg-blue-100 text-blue-700 hover:bg-blue-200';
+        switch(status?.toUpperCase()) {
+            case 'DONE': return 'bg-green-100 text-green-700 hover:bg-green-200';
+            case 'DOING': return 'bg-blue-100 text-blue-700 hover:bg-blue-200';
             default: return 'bg-gray-200 text-gray-700 hover:bg-gray-300';
         }
     };
     
     const getStatusLabel = (status: string) => {
-         switch(status?.toLowerCase()) {
-            case 'done': return 'DONE';
-            case 'doing': return 'IN PROGRESS';
+         switch(status?.toUpperCase()) {
+            case 'DONE': return 'DONE';
+            case 'DOING': return 'DOING';
             default: return 'TO DO';
         }
     }
@@ -467,7 +481,7 @@ export const TaskItem = ({ task, renderPriority, onUpdateTask, onDeleteTask }: T
                         className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                         onClick={() => handleStatusChange('doing')}
                     >
-                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> IN PROGRESS
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> DOING
                     </button>
                     <button 
                         className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 flex items-center gap-2"
@@ -529,6 +543,25 @@ export const TaskItem = ({ task, renderPriority, onUpdateTask, onDeleteTask }: T
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase border-b mb-1 bg-gray-50 sticky top-0">Assign to</div>
+                    {/* Assign to Me option */}
+                    {currentUser && (
+                        <div
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-blue-50 cursor-pointer text-xs transition-colors border-b border-gray-100"
+                            onClick={() => handleAssigneeChange({
+                                id: currentUser.id,
+                                fullName: currentUser.fullName || currentUser.name || "Me",
+                                avatarUrl: currentUser.avatarUrl
+                            })}
+                        >
+                            <img 
+                                src={currentUser.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.fullName || currentUser.name || "Me")}&background=random`} 
+                                alt="Me" 
+                                className="w-5 h-5 rounded-full border border-gray-200" 
+                            />
+                            <span className="truncate font-medium">Assign to me</span>
+                        </div>
+                    )}
+
                     {projectMembers.map(user => (
                         <div
                             key={user.id}

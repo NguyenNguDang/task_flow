@@ -75,6 +75,9 @@ public class Task extends AbstractEntity<Long> {
     
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Subtask> subtasks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TaskHistory> histories = new ArrayList<>();
     
     public boolean isUnfinished(){
         return this.status != TaskStatus.DONE;

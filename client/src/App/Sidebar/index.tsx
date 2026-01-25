@@ -141,6 +141,7 @@ export const Sidebar = () => {
                     className={"max-w-[500px] mx-auto"}
                     coords={{ top: 50, left: 0, right: 0 }}
                     onClose={() => setIsOpen(false)}
+                    zIndex={9999}
                 >
                     <div className="mb-4 flex items-center gap-4">
                         {currentUser?.avatarUrl && (

@@ -118,6 +118,19 @@ public class BoardServiceImpl implements BoardService {
 
     @Override
     @Transactional
+    public BoardDTO updateBoard(Long id, BoardRequest request) {
+        Board board = boardRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+
+        board.setTitle(request.getTitle());
+        board.setDescription(request.getDescription());
+
+        Board updatedBoard = boardRepository.save(board);
+        return toDTO(updatedBoard);
+    }
+
+    @Override
+    @Transactional
     public void deleteBoard(Long id) {
         if (!boardRepository.existsById(id)) {
             throw new ResourceNotFoundException("Board not found");

@@ -56,6 +56,12 @@ public class BoardController {
         return ResponseEntity.ok(boardColumnService.getColumnsByBoardId(boardId));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateBoard(@PathVariable Long id, @RequestBody @Valid BoardRequest board) {
+        BoardDTO updatedBoard = boardService.updateBoard(id, board);
+        return ResponseEntity.ok(updatedBoard);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBoard(@PathVariable Long id) {
         boardService.deleteBoard(id);
