@@ -335,8 +335,8 @@ export default function Board() {
                 });
             }
 
-        } catch (error) {
-            console.error("Lỗi rồi:", error);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to create task");
         }
 
     }
@@ -409,10 +409,10 @@ export default function Board() {
                 await taskService.updateColumnOrder(newColumnOrder);
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Lỗi cập nhật vị trí:", error);
             setData(previousData);
-            toast.error("Không thể cập nhật vị trí. Vui lòng thử lại!");
+            toast.error(error.response?.data?.message || "Không thể cập nhật vị trí. Vui lòng thử lại!");
         }
     };
 

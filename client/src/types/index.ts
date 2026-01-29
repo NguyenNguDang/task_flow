@@ -99,6 +99,7 @@ export interface CreateTaskRequest {
     projectId: number;
     boardId: number;
     sprintId: number;
+    status: string;
 }
 
 export interface User {

@@ -324,7 +324,6 @@ export default function Backlog() {
         }
 
         const taskId = Number(draggableId);
-        const sourceSprintId = source.droppableId === 'backlog' ? null : Number(source.droppableId);
         const destSprintId = destination.droppableId === 'backlog' ? null : Number(destination.droppableId);
 
         // Optimistic update

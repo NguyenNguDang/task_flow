@@ -193,7 +193,8 @@ const MenuHeader = () => {
             setIsLoading(true);
             try {
                 await axiosClient.post("/projects-member/leave", {
-                    projectId: Number(projectId)
+                    projectId: Number(projectId),
+                    email: user?.email // Add email to request body
                 });
                 toast.success("Rời dự án thành công!");
                 navigate("/projects");
