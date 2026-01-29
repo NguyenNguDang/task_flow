@@ -38,18 +38,17 @@ export default function Backlog() {
         const fetchBoardData = async () => {
             try {
                 const [sprintsRes, tasksRes] = await Promise.all([
-                    fetch(`${BACKEND_URL}/sprint/${numericBoardId}/list`),
-                    fetch(`${BACKEND_URL}/tasks/${numericBoardId}/list`)
+                    axiosClient.get(`/sprint/${numericBoardId}/list`),
+                    axiosClient.get(`/tasks/${numericBoardId}/list`)
                 ]);
 
-                if (sprintsRes.ok && tasksRes.ok) {
-                    const sprintsData = await sprintsRes.json();
-                    const tasksData = await tasksRes.json();
-                    // Filter out completed sprints for Backlog view
-                    const activeAndFutureSprints = sprintsData.filter((s: SprintType) => s.status !== 'completed');
-                    setSprints(activeAndFutureSprints);
-                    setAllTasks(tasksData);
-                }
+                const sprintsData = sprintsRes as unknown as SprintType[];
+                const tasksData = tasksRes as unknown as Task[];
+                // Filter out completed sprints for Backlog view
+                const activeAndFutureSprints = sprintsData.filter((s: SprintType) => s.status !== 'completed');
+                setSprints(activeAndFutureSprints);
+                setAllTasks(tasksData);
+                
             } catch (error) {
                 console.error("Error fetching board data:", error);
             } finally {
@@ -183,7 +182,7 @@ export default function Backlog() {
             });
 
             // Then start the sprint
-            await axios.patch(`${BACKEND_URL}/sprint/${sprintToStart.id}/start`);
+            await axiosClient.patch(`/sprint/${sprintToStart.id}/start`);
 
             const updatedSprints = sprints.map(s => {
                 if (s.id === sprintToStart.id) {
@@ -209,22 +208,40 @@ export default function Backlog() {
 
     const handleCompleteSprint = async (sprintId: number, targetSprintId: number|null) => {
         try {
-            const res = await axios.patch(`${BACKEND_URL}/sprint/${sprintId}/complete`, {},
+            await axiosClient.patch(`/sprint/${sprintId}/complete`, {},
                 {
                     params: {
                         targetSprintId: targetSprintId
                     }
                 });
-            if (res.status === 204) {
-                toast.success("Hoàn thành Sprint thành công!");
-                setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
-                setAllTasks(prevTasks => prevTasks.map(task => {
-                    if (task.sprintId === sprintId && task.status !== 'done') {
+            
+            toast.success("Sprint completed successfully!");
+            
+            // 1. Remove completed sprint from UI
+            setSprints(prevSprints => prevSprints.filter(s => s.id !== sprintId));
+            
+            // 2. Update tasks:
+            // - Tasks that are DONE: Remove from UI (or keep them but they won't show in any active sprint)
+            // - Tasks that are NOT DONE: Move to target sprint (or backlog if target is null)
+            setAllTasks(prevTasks => {
+                // Filter out tasks that were in the completed sprint AND are DONE
+                // These tasks are now "archived" in the completed sprint and shouldn't appear in backlog/active sprints
+                const remainingTasks = prevTasks.filter(task => {
+                    if (task.sprintId === sprintId && task.status?.toLowerCase() === 'done') {
+                        return false; // Remove DONE tasks of completed sprint from view
+                    }
+                    return true;
+                });
+
+                // Update sprintId for unfinished tasks
+                return remainingTasks.map(task => {
+                    if (task.sprintId === sprintId && task.status?.toLowerCase() !== 'done') {
                         return { ...task, sprintId: targetSprintId ?? null };
                     }
                     return task;
-                }));
-            }
+                });
+            });
+
         }catch (error) {
             console.error("Failed to complete sprint:", error);
             toast.error("Failed to complete sprint. Please try again.");

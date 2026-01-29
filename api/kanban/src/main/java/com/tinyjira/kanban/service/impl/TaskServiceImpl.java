@@ -1,33 +1,29 @@
 package com.tinyjira.kanban.service.impl;
 
 import com.tinyjira.kanban.DTO.request.TaskRequest;
-import com.tinyjira.kanban.DTO.response.BoardDetailResponse;
 import com.tinyjira.kanban.DTO.response.TaskDetailResponse;
 import com.tinyjira.kanban.event.TaskAssignedEvent;
 import com.tinyjira.kanban.event.TaskEstimationUpdatedEvent;
 import com.tinyjira.kanban.exception.ResourceNotFoundException;
 import com.tinyjira.kanban.model.*;
 import com.tinyjira.kanban.repository.*;
+import com.tinyjira.kanban.security.annotation.RequireProjectRole;
 import com.tinyjira.kanban.service.TaskHistoryService;
 import com.tinyjira.kanban.service.TaskService;
-import com.tinyjira.kanban.service.specification.TaskSpecification;
 import com.tinyjira.kanban.utils.Priority;
 import com.tinyjira.kanban.utils.ProjectRole;
 import com.tinyjira.kanban.utils.SprintStatus;
 import com.tinyjira.kanban.utils.TaskStatus;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.transaction.annotation.Transactional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.ResourceAccessException;
 
 import java.nio.file.AccessDeniedException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -53,40 +49,19 @@ public class TaskServiceImpl implements TaskService {
     private final TaskHistoryService taskHistoryService;
     
     @Override
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER}, taskIdParam = "taskId")
     public void moveTask(Long taskId, Long targetColumnId, int newIndex) {
         
         Task taskToMove = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceAccessException("Task not found"));
-
-        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        User currentUser = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        if (taskToMove.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
-             throw new ResourceAccessException("Viewer cannot move tasks.");
-        }
         
         BoardColumn targetColumn = columnRepository.findById(targetColumnId)
                 .orElseThrow(() -> new ResourceAccessException("Column not found"));
         
         List<Task> tasksInColumn = taskRepository.findByBoardColumnOrderByPositionAsc(targetColumn);
         
-        System.out.println("Size trước khi xóa: " + tasksInColumn.size());
-
-// 2. Thực hiện xóa với logic "bất tử"
-        boolean removed = tasksInColumn.removeIf(t -> {
-            String dbId = String.valueOf(t.getId()).trim(); // Lấy ID từ DB, ép về String, cắt khoảng trắng
-            String inputId = String.valueOf(taskId).trim(); // Lấy ID input, ép về String, cắt khoảng trắng
-            
-            // Log ra từng thằng để bắt tận tay (Nếu list ngắn)
-            // System.out.println("So sánh: [" + dbId + "] vs [" + inputId + "]");
-            
-            return dbId.equalsIgnoreCase(inputId);
-        });
-
-// 3. In kết quả
-        System.out.println("Đã xóa được chưa? " + removed);
-        System.out.println("Size sau khi xóa: " + tasksInColumn.size());
+        tasksInColumn.removeIf(t -> t.getId().equals(taskId));
+        
         double newPosition = calculateNewPosition(tasksInColumn, newIndex);
         
         taskToMove.setBoardColumn(targetColumn);
@@ -95,6 +70,7 @@ public class TaskServiceImpl implements TaskService {
     }
     
     @Override
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER, ProjectRole.VIEWER}, boardIdParam = "boardId")
     public List<TaskDetailResponse> getTasksByBoardId(Long boardId) {
         List<Task> tasks = taskRepository.findByBoardId(boardId);
         
@@ -103,6 +79,7 @@ public class TaskServiceImpl implements TaskService {
     
     @Override
     @Transactional(readOnly = true)
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER, ProjectRole.VIEWER}, boardIdParam = "boardId")
     public List<TaskDetailResponse> getTasksInActiveSprint(Long boardId) {
         Optional<Sprint> activeSprintOpt = sprintRepository.findActiveSprintByBoardId(boardId, SprintStatus.ACTIVE);
         
@@ -115,14 +92,8 @@ public class TaskServiceImpl implements TaskService {
     }
     
     @Override
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER})
     public TaskDetailResponse createTask(TaskRequest taskRequest, User creator) {
-        Board board = boardRepository.findById(taskRequest.getBoardId())
-                .orElseThrow(() -> new ResourceNotFoundException("Board not found!"));
-
-        if (board.getProject().getRole(creator) == ProjectRole.VIEWER) {
-            throw new ResourceAccessException("Viewer cannot create tasks.");
-        }
-
         Task task = toEntity(taskRequest);
         log.info("due date and assigneeId {}, {}", taskRequest.getDueDate(), taskRequest.getAssigneeId());
         Double maxPosition = taskRepository.findMaxPositionByBoardColumnId(taskRequest.getColumnId());
@@ -132,7 +103,6 @@ public class TaskServiceImpl implements TaskService {
             task.setPosition(maxPosition + 1000.0);
         }
         
-        // Set status from request if available, otherwise default to TODO
         if (taskRequest.getStatus() != null) {
             task.setStatus(taskRequest.getStatus());
         } else {
@@ -140,10 +110,8 @@ public class TaskServiceImpl implements TaskService {
         }
         
         task.setCreator(creator);
-        
         task.setStartDate(LocalDateTime.now());
         
-        // Handle optional fields
         if (taskRequest.getDueDate() != null) {
             task.setDueDate(taskRequest.getDueDate().atStartOfDay());
         }
@@ -160,14 +128,11 @@ public class TaskServiceImpl implements TaskService {
     }
     
     @Override
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER}, taskIdParam = "taskId")
     public void assignTask(Long taskId, Long assigneeId, User currentUser) throws AccessDeniedException {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
         
-        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
-             throw new AccessDeniedException("Viewer cannot assign tasks.");
-        }
-
         if (!task.canBeAssignedBy(currentUser)) {
             throw new AccessDeniedException("Bạn không có quyền gán task này (Chỉ PM hoặc Creator)");
         }
@@ -175,7 +140,6 @@ public class TaskServiceImpl implements TaskService {
         User assignee = userRepository.findById(assigneeId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        // Check if user is project member OR project owner
         boolean isMember = task.getBoard().getProject().hasMember(assignee);
         boolean isOwner = task.getBoard().getProject().getOwner().getId().equals(assignee.getId());
 
@@ -189,7 +153,6 @@ public class TaskServiceImpl implements TaskService {
         task.assign(assignee);
         taskRepository.save(task);
         
-        // Log history
         taskHistoryService.logHistory(task, currentUser, "assignee", oldAssigneeName, assignee.getName());
         
         eventPublisher.publishEvent(new TaskAssignedEvent(
@@ -203,17 +166,10 @@ public class TaskServiceImpl implements TaskService {
     
     @Override
     @Transactional
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER}, taskIdParam = "taskId")
     public void estimateTask(Long taskId, Double hours) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
-
-        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        User currentUser = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
-             throw new ResourceAccessException("Viewer cannot estimate tasks.");
-        }
         
         Double oldEstimate = task.getEstimateHours();
         
@@ -233,6 +189,7 @@ public class TaskServiceImpl implements TaskService {
     }
     
     @Override
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER, ProjectRole.VIEWER}, taskIdParam = "id")
     public TaskDetailResponse getTaskById(Long id) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
@@ -241,13 +198,10 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER}, taskIdParam = "taskId")
     public void updateTask(Long taskId, Map<String, Object> updates, User currentUser) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
-
-        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
-             throw new ResourceAccessException("Viewer cannot update tasks.");
-        }
 
         updates.forEach((key, value) -> {
             String oldValue = "";
@@ -263,9 +217,8 @@ public class TaskServiceImpl implements TaskService {
                     }
                     break;
                 case "description":
-                    // Description might be long, maybe just log "changed" or truncate
                     if (task.getDescription() != null && !task.getDescription().equals(value)) {
-                        oldValue = "Old Description"; // Or truncate
+                        oldValue = "Old Description";
                         task.setDescription((String) value);
                         newValue = "New Description";
                         changed = true;
@@ -284,44 +237,12 @@ public class TaskServiceImpl implements TaskService {
                         newValue = newStatus.name();
                         changed = true;
                         
-                        // Logic tự động chuyển cột khi status thay đổi
                         if (newStatus == TaskStatus.DONE) {
-                            // Tìm cột DONE trong board hiện tại
-                            Board board = task.getBoard();
-                            Optional<BoardColumn> doneColumn = board.getColumns().stream()
-                                    .filter(col -> col.getTitle().equalsIgnoreCase("done"))
-                                    .findFirst();
-                            
-                            if (doneColumn.isPresent()) {
-                                Double maxPos = taskRepository.findMaxPositionByBoardColumnId(doneColumn.get().getId());
-                                double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
-                                task.setBoardColumn(doneColumn.get());
-                                task.setPosition(newPos);
-                            }
+                            findColumnAndMoveTask(task, "done");
                         } else if (newStatus == TaskStatus.TODO) {
-                             // Tìm cột TODO
-                            Board board = task.getBoard();
-                            Optional<BoardColumn> todoColumn = board.getColumns().stream()
-                                    .filter(col -> col.getTitle().equalsIgnoreCase("to do") || col.getTitle().equalsIgnoreCase("todo"))
-                                    .findFirst();
-                             if (todoColumn.isPresent()) {
-                                Double maxPos = taskRepository.findMaxPositionByBoardColumnId(todoColumn.get().getId());
-                                double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
-                                task.setBoardColumn(todoColumn.get());
-                                task.setPosition(newPos);
-                            }
+                             findColumnAndMoveTask(task, "todo");
                         } else if (newStatus == TaskStatus.DOING) {
-                            // Tìm cột DOING / IN PROGRESS
-                            Board board = task.getBoard();
-                            Optional<BoardColumn> doingColumn = board.getColumns().stream()
-                                    .filter(col -> col.getTitle().equalsIgnoreCase("doing") || col.getTitle().equalsIgnoreCase("in progress"))
-                                    .findFirst();
-                            if (doingColumn.isPresent()) {
-                                Double maxPos = taskRepository.findMaxPositionByBoardColumnId(doingColumn.get().getId());
-                                double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
-                                task.setBoardColumn(doingColumn.get());
-                                task.setPosition(newPos);
-                            }
+                            findColumnAndMoveTask(task, "doing", "in progress");
                         }
                     }
                     break;
@@ -380,37 +301,19 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER}, taskIdParam = "taskId")
     public void deleteTask(Long taskId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
-
-        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        User currentUser = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
-             throw new ResourceAccessException("Viewer cannot delete tasks.");
-        }
-
         taskRepository.deleteById(taskId);
     }
 
     @Override
     @Transactional
+    @RequireProjectRole(value = {ProjectRole.PROJECT_MANAGER, ProjectRole.MEMBER}, taskIdParam = "taskId")
     public void moveTaskToSprint(Long taskId, Long sprintId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        User currentUser = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
-             throw new ResourceAccessException("Viewer cannot move tasks to sprint.");
-        }
-
         if (sprintId == null) {
-            // Move to backlog
             task.setSprint(null);
         } else {
             Sprint sprint = sprintRepository.findById(sprintId)
@@ -421,13 +324,31 @@ public class TaskServiceImpl implements TaskService {
         taskRepository.save(task);
     }
     
+    private void findColumnAndMoveTask(Task task, String... columnTitles) {
+        Board board = task.getBoard();
+        Optional<BoardColumn> targetColumn = board.getColumns().stream()
+                .filter(col -> {
+                    String colTitle = col.getTitle().toLowerCase();
+                    for (String title : columnTitles) {
+                        if (colTitle.equals(title)) return true;
+                    }
+                    return false;
+                })
+                .findFirst();
+        
+        targetColumn.ifPresent(col -> {
+            Double maxPos = taskRepository.findMaxPositionByBoardColumnId(col.getId());
+            double newPos = (maxPos != null ? maxPos : 0.0) + POSITION_GAP;
+            task.setBoardColumn(col);
+            task.setPosition(newPos);
+        });
+    }
+    
     private double calculateNewPosition(List<Task> tasks, int index) {
-        // column is empty
         if (tasks.isEmpty()) {
             return POSITION_GAP;
         }
         
-        // first
         if (index <= 0) {
             double firstTaskPos = tasks.get(0).getPosition();
             if (firstTaskPos < MIN_GAP_THRESHOLD) {
@@ -437,13 +358,11 @@ public class TaskServiceImpl implements TaskService {
             return (MIN_POSITION + firstTaskPos) / 2;
         }
         
-        // last
         if (index >= tasks.size()) {
             double lastTaskPos = tasks.get(tasks.size() - 1).getPosition();
             return lastTaskPos + POSITION_GAP;
         }
         
-        // middle
         Task prevTask = tasks.get(index - 1);
         Task nextTask = tasks.get(index);
         

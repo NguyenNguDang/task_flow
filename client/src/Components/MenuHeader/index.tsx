@@ -18,11 +18,11 @@ import { useAuth } from "../../context/AuthContext";
 type ModalType = "MENU" | "ADD_PEOPLE" | "USERS" | "NOTIFICATIONS" | null;
 
 interface UserSummary {
-    id: number;
-    username: string;
-    fullName: string;
+    userId: number;
+    name: string;
+    email: string;
     avatarUrl: string;
-    projectRole: string;
+    role: string;
 }
 
 interface Notification {
@@ -109,7 +109,7 @@ const MenuHeader = () => {
     const fetchProjectMembers = async () => {
         if (!projectId) return;
         try {
-            const res = await axiosClient.get(`/projects/${projectId}/members`);
+            const res = await axiosClient.get(`/projects-member/${projectId}`);
             setProjectMembers(res as any);
         } catch (error) {
             console.error("Failed to fetch members", error);
@@ -128,7 +128,7 @@ const MenuHeader = () => {
         };
         try {
             await axiosClient.post("/projects-member/add", payload );
-            toast.success("Add people success!");
+            toast.success("Member added successfully!");
             setEmail("");
             if (activeModal === "USERS") {
                 fetchProjectMembers(); // Refresh list if in Users modal
@@ -189,18 +189,18 @@ const MenuHeader = () => {
     };
 
     const handleLeaveProject = async () => {
-        if (window.confirm("Bạn có chắc chắn muốn rời khỏi dự án này không?")) {
+        if (window.confirm("Are you sure you want to leave this project?")) {
             setIsLoading(true);
             try {
                 await axiosClient.post("/projects-member/leave", {
                     projectId: Number(projectId),
                     email: user?.email // Add email to request body
                 });
-                toast.success("Rời dự án thành công!");
+                toast.success("Left project successfully!");
                 navigate("/projects");
             } catch (error: any) {
                 console.error("API Error:", error);
-                toast.error(error.response?.data?.message || "Có lỗi xảy ra!");
+                toast.error(error.response?.data?.message || "An error occurred!");
             } finally {
                 setIsLoading(false);
                 closeModal();
@@ -220,7 +220,7 @@ const MenuHeader = () => {
 
     const isOwner = user?.id === projectOwnerId;
     // Check if current user is a member (not owner)
-    const isMember = !isOwner && projectMembers.some(m => m.id === user?.id);
+    const isMember = !isOwner && projectMembers.some(m => m.userId === user?.id);
 
     return (
         <div className="mx-4 pt-4 pl-4 border-b border-gray-300">
@@ -382,43 +382,43 @@ const MenuHeader = () => {
                         ) : (
                             <ul className="divide-y divide-gray-100">
                                 {projectMembers.map((member) => (
-                                    <li key={member.id} className="flex items-center justify-between py-3">
+                                    <li key={member.userId} className="flex items-center justify-between py-3">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                                                 {member.avatarUrl ? (
-                                                    <img src={member.avatarUrl} alt={member.fullName} className="w-full h-full object-cover" />
+                                                    <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span className="text-xs font-bold text-gray-500">{member.fullName?.charAt(0).toUpperCase()}</span>
+                                                    <span className="text-xs font-bold text-gray-500">{member.name?.charAt(0).toUpperCase()}</span>
                                                 )}
                                             </div>
                                             <div>
                                                 <p className="text-sm font-medium text-gray-900">
-                                                    {member.fullName} 
-                                                    {member.id === projectOwnerId && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Owner</span>}
+                                                    {member.name} 
+                                                    {member.userId === projectOwnerId && <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Owner</span>}
                                                 </p>
-                                                <p className="text-xs text-gray-500">{member.username}</p>
+                                                <p className="text-xs text-gray-500">{member.email}</p>
                                             </div>
                                         </div>
                                         <div className="flex gap-2 items-center">
-                                            {isOwner && member.id !== projectOwnerId && (
+                                            {isOwner && member.userId !== projectOwnerId && (
                                                 <>
                                                     <select
-                                                        value={member.projectRole || "member"}
-                                                        onChange={(e) => handleChangeRole(member.id, e.target.value)}
+                                                        value={member.role || "MEMBER"}
+                                                        onChange={(e) => handleChangeRole(member.userId, e.target.value)}
                                                         className="text-xs border border-gray-300 rounded px-2 py-1 outline-none focus:border-blue-500"
                                                     >
-                                                        <option value="member">Member</option>
-                                                        <option value="viewer">Viewer</option>
+                                                        <option value="MEMBER">Member</option>
+                                                        <option value="VIEWER">Viewer</option>
                                                     </select>
                                                     <button
-                                                        onClick={() => handleTransferOwnership(member.id)}
+                                                        onClick={() => handleTransferOwnership(member.userId)}
                                                         className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors"
                                                         title="Transfer Ownership"
                                                     >
                                                         <FaExchangeAlt size={14} />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleRemoveMember(member.id)}
+                                                        onClick={() => handleRemoveMember(member.userId)}
                                                         className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors"
                                                         title="Remove member"
                                                     >
@@ -426,9 +426,9 @@ const MenuHeader = () => {
                                                     </button>
                                                 </>
                                             )}
-                                            {!isOwner && member.id !== projectOwnerId && (
+                                            {!isOwner && member.userId !== projectOwnerId && (
                                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                                    {member.projectRole || "MEMBER"}
+                                                    {member.role || "MEMBER"}
                                                 </span>
                                             )}
                                         </div>

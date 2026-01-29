@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,7 +21,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("api/v1/sprint")
 @Slf4j(topic = "SPRINT-CONTROLLER")
-@CrossOrigin(origins = "http://localhost:5173")
 public class SprintController {
     private final SprintService sprintService;
     
@@ -62,6 +62,9 @@ public class SprintController {
             log.info("Get all sprints with board id");
             return ResponseEntity.ok(sprints);
             
+        } catch (AccessDeniedException e) {
+            log.warn("Access denied for board {}: {}", boardId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (Exception e) {
             log.error("getAllSprintsWithBoarId: ", e);
             return ResponseEntity.internalServerError().body(e.getMessage());

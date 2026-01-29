@@ -1,6 +1,7 @@
 package com.tinyjira.kanban.controller;
 
 import com.tinyjira.kanban.DTO.request.ProjectMemberRequest;
+import com.tinyjira.kanban.DTO.response.ProjectMemberResponse;
 import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.service.ProjectMemberService;
 import com.tinyjira.kanban.utils.ProjectRole;
@@ -12,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @Validated
@@ -68,5 +70,10 @@ public class ProjectMemberController {
 
         projectMemberService.changeMemberRole(projectId, userId, newRole, requester);
         return ResponseEntity.ok("Member role changed successfully");
+    }
+
+    @GetMapping("/{projectId}")
+    public ResponseEntity<List<ProjectMemberResponse>> getProjectMembers(@PathVariable Long projectId) {
+        return ResponseEntity.ok(projectMemberService.getProjectMembers(projectId));
     }
 }

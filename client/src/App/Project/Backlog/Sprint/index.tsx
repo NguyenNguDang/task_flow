@@ -66,7 +66,7 @@ export const Sprint = ({
         name: 'Backlog'
     });
     const isCurrentSprintActive = status?.toLowerCase() === 'active';
-    const unfinishedTasksCount = tasks.filter(t => t.status !== 'done').length;
+    const unfinishedTasksCount = tasks.filter(t => t.status?.toLowerCase() !== 'done').length;
     const [isOpen, setIsOpen] = useState<ModalType>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -459,7 +459,7 @@ export const Sprint = ({
                             </p>
                             <div className="bg-blue-50 p-3 rounded border border-blue-100 text-blue-800">
                                 <p className="mb-1 text-xs uppercase font-bold text-blue-600">Hệ thống sẽ tự động chuyển đến:</p>
-                                <p className="font-medium text-lg">👉 {targetSprintInfo.name}</p>
+                                <p className="font-medium text-lg">{targetSprintInfo.name}</p>
                             </div>
                         </div>
                         <div className="flex justify-end gap-2">

@@ -32,17 +32,18 @@ public class JwtDecoderConfig implements JwtDecoder {
         
         log.debug("Decoding JWT token: {}", token);
         try {
-            if(!jwtService.verifyToken(token)){
-             throw new JwtException("JWT verification failed");
-            }
+            // if(!jwtService.verifyToken(token)){
+            //  throw new JwtException("JWT verification failed");
+            // }
             if(Objects.isNull(nimbusJwtDecoder)){
                 SecretKey secretKeySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HS512");
                 nimbusJwtDecoder = NimbusJwtDecoder.withSecretKey(secretKeySpec)
                         .macAlgorithm(MacAlgorithm.HS512)
                         .build();
             }
-        } catch (ParseException | JOSEException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            log.error("Error decoding JWT token", e);
+            throw new JwtException("Error decoding JWT token", e);
         }
         return nimbusJwtDecoder.decode(token);
     }

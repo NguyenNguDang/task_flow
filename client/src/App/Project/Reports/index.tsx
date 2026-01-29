@@ -183,26 +183,21 @@ export default function Reports() {
         const fetchSprints = async () => {
             console.log("Fetching sprints for boardId:", boardId);
             try {
-                const res = await fetch(`${BACKEND_URL}/sprint/${boardId}/list`);
-                if (res.ok) {
-                    const data = await res.json();
-                    console.log("Sprints fetched:", data);
-                    setSprints(data);
-                    // Select active sprint or first sprint by default
-                    const active = data.find((s: any) => s.status === 'active');
-                    if (active) {
-                        console.log("Setting active sprint:", active.id);
-                        setSelectedSprintId(String(active.id));
-                    } else if (data.length > 0) {
-                        console.log("Setting first sprint:", data[0].id);
-                        setSelectedSprintId(String(data[0].id));
-                    } else {
-                        console.log("No sprints found");
-                        setLoading(false); // No sprints found
-                    }
+                const res = await axiosClient.get(`/sprint/${boardId}/list`);
+                const data = res as unknown as SprintType[];
+                console.log("Sprints fetched:", data);
+                setSprints(data);
+                // Select active sprint or first sprint by default
+                const active = data.find((s: any) => s.status === 'active');
+                if (active) {
+                    console.log("Setting active sprint:", active.id);
+                    setSelectedSprintId(String(active.id));
+                } else if (data.length > 0) {
+                    console.log("Setting first sprint:", data[0].id);
+                    setSelectedSprintId(String(data[0].id));
                 } else {
-                    console.error("Failed to fetch sprints, status:", res.status);
-                    setLoading(false);
+                    console.log("No sprints found");
+                    setLoading(false); // No sprints found
                 }
             } catch (error) {
                 console.error("Failed to fetch sprints", error);
@@ -240,48 +235,44 @@ export default function Reports() {
                 // Note: Ideally backend should provide a dedicated endpoint for report tables
                 // For now, we fetch all tasks and filter client-side or use existing endpoints
                 console.log("Fetching tasks for boardId:", boardId);
-                const tasksRes = await fetch(`${BACKEND_URL}/tasks/${boardId}/list`);
-                if (tasksRes.ok) {
-                    const tasks = await tasksRes.json();
-                    console.log("Tasks fetched:", tasks.length);
-                    const currentSprintTasks = tasks.filter((t: any) => String(t.sprintId) === selectedSprintId);
-                    console.log("Tasks in current sprint:", currentSprintTasks.length);
+                const tasksRes = await axiosClient.get(`/tasks/${boardId}/list`);
+                const tasks = tasksRes as unknown as any[];
+                console.log("Tasks fetched:", tasks.length);
+                const currentSprintTasks = tasks.filter((t: any) => String(t.sprintId) === selectedSprintId);
+                console.log("Tasks in current sprint:", currentSprintTasks.length);
+                
+                const selectedSprint = sprints.find(s => String(s.id) === selectedSprintId);
+                const sprintStartDate = selectedSprint ? new Date(selectedSprint.startDate) : null;
+                const sprintEndDate = selectedSprint ? new Date(selectedSprint.endDate) : null;
+
+                const completed: WorkItem[] = [];
+                const incomplete: WorkItem[] = [];
+                const outside: WorkItem[] = [];
+
+                currentSprintTasks.forEach((t: any) => {
+                    const workItem = mapTaskToWorkItem(t);
+                    const isDone = t.status?.toUpperCase() === 'DONE';
                     
-                    const selectedSprint = sprints.find(s => String(s.id) === selectedSprintId);
-                    const sprintStartDate = selectedSprint ? new Date(selectedSprint.startDate) : null;
-                    const sprintEndDate = selectedSprint ? new Date(selectedSprint.endDate) : null;
-
-                    const completed: WorkItem[] = [];
-                    const incomplete: WorkItem[] = [];
-                    const outside: WorkItem[] = [];
-
-                    currentSprintTasks.forEach((t: any) => {
-                        const workItem = mapTaskToWorkItem(t);
-                        const isDone = t.status?.toUpperCase() === 'DONE';
-                        
-                        if (isDone) {
-                            // Check if completed outside sprint
-                            if (sprintStartDate && sprintEndDate && t.updatedAt) {
-                                const completedDate = new Date(t.updatedAt);
-                                // Check if completed BEFORE start or AFTER end
-                                if (completedDate < sprintStartDate || completedDate > sprintEndDate) {
-                                    outside.push(workItem);
-                                } else {
-                                    completed.push(workItem);
-                                }
+                    if (isDone) {
+                        // Check if completed outside sprint
+                        if (sprintStartDate && sprintEndDate && t.updatedAt) {
+                            const completedDate = new Date(t.updatedAt);
+                            // Check if completed BEFORE start or AFTER end
+                            if (completedDate < sprintStartDate || completedDate > sprintEndDate) {
+                                outside.push(workItem);
                             } else {
-                                // If no dates available, assume inside sprint
                                 completed.push(workItem);
                             }
                         } else {
-                            incomplete.push(workItem);
+                            // If no dates available, assume inside sprint
+                            completed.push(workItem);
                         }
-                    });
+                    } else {
+                        incomplete.push(workItem);
+                    }
+                });
 
-                    setSprintTasks({ completed, incomplete, outside });
-                } else {
-                    console.error("Failed to fetch tasks, status:", tasksRes.status);
-                }
+                setSprintTasks({ completed, incomplete, outside });
 
             } catch (error) {
                 console.error("Failed to fetch report data", error);

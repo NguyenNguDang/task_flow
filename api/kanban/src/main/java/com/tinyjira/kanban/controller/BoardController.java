@@ -8,7 +8,9 @@ import com.tinyjira.kanban.service.BoardService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +21,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("api/v1/boards")
 @Slf4j(topic = "BOARD-CONTROLLER")
-@CrossOrigin(origins = "http://localhost:5173")
 public class BoardController {
     private final BoardService boardService;
     private final BoardColumnService boardColumnService;
@@ -53,7 +54,15 @@ public class BoardController {
     
     @GetMapping("/{boardId}/columns")
     public ResponseEntity<?> getBoardColumns(@PathVariable Long boardId) {
-        return ResponseEntity.ok(boardColumnService.getColumnsByBoardId(boardId));
+        try {
+            return ResponseEntity.ok(boardColumnService.getColumnsByBoardId(boardId));
+        } catch (AccessDeniedException e) {
+            log.warn("Access denied for board {}: {}", boardId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            log.error("getBoardColumns: ", e);
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")

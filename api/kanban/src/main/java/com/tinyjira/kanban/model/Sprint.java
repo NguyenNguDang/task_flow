@@ -66,6 +66,7 @@ public class Sprint extends AbstractEntity<Long>{
     }
     
     public void rolloverUnfinishedTasks(List<Task> tasks, Sprint sprint) {
+        // Only move unfinished tasks
         List<Task> unfinishedTasks = tasks.stream()
                 .filter(Task::isUnfinished)
                 .toList();
@@ -77,6 +78,9 @@ public class Sprint extends AbstractEntity<Long>{
                 task.moveToBacklog();
             }
         }
+        
+        // Tasks that are DONE will remain in the completed sprint (this sprint)
+        // No action needed for them as they are already associated with this sprint
     }
     
     //date time

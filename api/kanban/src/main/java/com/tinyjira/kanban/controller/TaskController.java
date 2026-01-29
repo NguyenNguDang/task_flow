@@ -33,7 +33,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 @RequestMapping("api/v1/tasks")
 @Slf4j(topic = "TASK-CONTROLLER")
-@CrossOrigin(origins = "http://localhost:5173")
 @Tag(name = "Task Controller", description = "Quản lý các công việc")
 public class TaskController {
     private final TaskService taskService;

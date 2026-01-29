@@ -13,14 +13,19 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class AppConfig {
-    private static final String[] WHITE_LIST = { "api/v1/**", "/v3/api-docs/**",
+    private static final String[] WHITE_LIST = { "/api/v1/auth/**", "/v3/api-docs/**",
             "/swagger-ui/**",
-            "/swagger-ui.html"};
+            "/swagger-ui.html", "/media/**"};
     
     private final UserDetailServiceCustomizer userDetailServiceCustomizer;
     private final JwtDecoderConfig jwtDecoderConfig;
@@ -29,6 +34,7 @@ public class AppConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers(WHITE_LIST).permitAll()
@@ -40,6 +46,17 @@ public class AppConfig {
                                 .jwtAuthenticationConverter(jwtToUserConverter)
                 ));
         return http.build();
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedMethods(List.of("*"));
+        configuration.setAllowedHeaders(List.of("*"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
     
     @Bean

@@ -3,7 +3,7 @@ import {memo, useEffect, useState} from "react";
 import Column from "./Column";
 import {DragDropContext, DropResult} from "@hello-pangea/dnd";
 import {Column as ColumnType, CreateTaskRequest, Data, TaskCard, User} from "types";
-import axios from "axios";
+import axiosClient from "../../../api"; // Use axiosClient instead of axios
 import {BACKEND_URL} from "Constants";
 import {convertToAppropriateFormat} from "utils";
 import {useLoaderData, useParams} from "react-router-dom";
@@ -136,24 +136,24 @@ export async function loadBoardData({params}: any) {
 
         const [tasksRes, sprintsRes, columnsRes] = await Promise.all([
             // 1.Call API get All tasks of Active Sprint
-            axios.get(`${BACKEND_URL}/tasks/${boardId}/active-sprint`),
+            axiosClient.get(`/tasks/${boardId}/active-sprint`),
 
             // 2. Call API get Sprints
-            axios.get(`${BACKEND_URL}/sprint/${boardId}/list`),
+            axiosClient.get(`/sprint/${boardId}/list`),
 
             // 3. Call API Get columns
-            axios.get(`${BACKEND_URL}/boards/${boardId}/columns`)
+            axiosClient.get(`/boards/${boardId}/columns`)
         ]);
 
-        const tasks = tasksRes.data;
+        const tasks = tasksRes; // axiosClient returns response.data directly
         console.log("Tasks loaded", tasks);
-        const sprints = sprintsRes.data;
+        const sprints = sprintsRes;
         // console.log("Sprints", sprints);
-        const columns = columnsRes.data;
+        const columns = columnsRes;
         // console.log("Columns", columns);
 
         // Tìm active sprint để hiển thị tên trên UI
-        const activeSprintInfo = sprints ? sprints
+        const activeSprintInfo = sprints ? (sprints as any[])
             .find((s: any) => s.status === "active") : null;
         // Gom dữ liệu để convert
         const rawData = {
@@ -206,44 +206,15 @@ export default function Board() {
     };
 
     const handleTaskUpdate = async () => {
-        // Reload data from API to ensure consistency
-        // Or update state locally if we have enough info
-        // For simplicity and correctness, let's refetch the board data
-        // But refetching might be heavy. 
-        // A better approach is to update the specific task in state if we know what changed.
-        // Since TaskDetailModal handles many fields, refetching might be safer or we can pass the updated task object back.
-        
-        // Let's try to refetch for now as it guarantees sync with backend logic (like status changes moving columns)
         try {
-             const [tasksRes] = await Promise.all([
-                axios.get(`${BACKEND_URL}/tasks/${boardIdParam}/active-sprint`)
-            ]);
-            const tasks = tasksRes.data;
-            
-            // We need to merge this new task data into existing board structure
-            // This might be complex because convertToAppropriateFormat rebuilds everything.
-            // Let's try to just update the tasks map and columns if status changed.
-            
-            // Actually, re-running loadBoardData logic might be best but we are inside a component.
-            // Let's just re-fetch tasks and re-format.
-            
-            const rawData = {
-                tasks: tasks || [],
-                columns: Object.values(data.columns).map((c: any) => ({id: c.id, title: c.title})) // Reuse existing columns info
-            };
-            
-            // We need columns from current state to preserve order? 
-            // Actually convertToAppropriateFormat expects raw columns from API.
-            // Let's just fetch everything again to be safe.
-            
-            const [tasksRes2, columnsRes] = await Promise.all([
-                axios.get(`${BACKEND_URL}/tasks/${boardIdParam}/active-sprint`),
-                axios.get(`${BACKEND_URL}/boards/${boardIdParam}/columns`)
+            const [tasksRes, columnsRes] = await Promise.all([
+                axiosClient.get(`/tasks/${boardIdParam}/active-sprint`),
+                axiosClient.get(`/boards/${boardIdParam}/columns`)
             ]);
             
             const newData = convertToAppropriateFormat({
-                tasks: tasksRes2.data || [],
-                columns: columnsRes.data || []
+                tasks: tasksRes || [],
+                columns: columnsRes || []
             });
             
             setData(newData);
@@ -299,12 +270,10 @@ export default function Board() {
         try {
             const response = await taskService.create(payload);
             const newTask = response.data;
-            console.log("New task", newTask);
-            console.log("Task vừa tạo có ID là:", newTask.id);
 
             // Show toast if no active sprint
             if (!activeSprint?.id) {
-                toast.info("Chưa có Sprint nào đang chạy. Task sẽ được chuyển vào Backlog.");
+                toast.info("No active sprint. Task will be moved to Backlog.");
             } else {
                 // Only update UI if there is an active sprint (task appears on board)
                 setData((prevData: any) => {
@@ -347,7 +316,6 @@ export default function Board() {
     }
 
     const onDragEnd = async (result: DropResult) => {
-        console.log('Drag ended:', result);
         const {destination, source, draggableId, type} = result;
         if (!destination ||
             (destination.droppableId === source.droppableId && destination.index === source.index)) {
@@ -410,9 +378,9 @@ export default function Board() {
             }
 
         } catch (error: any) {
-            console.error("Lỗi cập nhật vị trí:", error);
+            console.error("Failed to update position:", error);
             setData(previousData);
-            toast.error(error.response?.data?.message || "Không thể cập nhật vị trí. Vui lòng thử lại!");
+            toast.error(error.response?.data?.message || "Could not update position. Please try again!");
         }
     };
 

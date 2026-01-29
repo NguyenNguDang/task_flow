@@ -93,7 +93,7 @@ public class Project extends AbstractEntity<Long> {
     }
 
     public ProjectRole getRole(User user) {
-        if (this.owner.getId().equals(user.getId())) {
+        if (this.owner != null && this.owner.getId().equals(user.getId())) {
             return ProjectRole.PROJECT_MANAGER;
         }
         return members.stream()
