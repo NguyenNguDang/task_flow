@@ -63,10 +63,16 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional(readOnly = true)
     public List<UserSummaryResponse> getProjectMembers(Long projectId) {
-        List<User> users = userRepository.findUsersByProjectId(projectId);
-        return users.stream()
-                .map(UserSummaryResponse::fromEntity)
-                .collect(Collectors.toList());
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        // Get members from project entity directly to access role
+        return project.getMembers().stream()
+                .map(member -> {
+                    UserSummaryResponse dto = UserSummaryResponse.fromEntity(member.getUser());
+                    dto.setProjectRole(member.getProjectRole());
+                    return dto;
+                }).toList();
     }
 
     @Override

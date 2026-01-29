@@ -12,11 +12,13 @@ import com.tinyjira.kanban.service.TaskHistoryService;
 import com.tinyjira.kanban.service.TaskService;
 import com.tinyjira.kanban.service.specification.TaskSpecification;
 import com.tinyjira.kanban.utils.Priority;
+import com.tinyjira.kanban.utils.ProjectRole;
 import com.tinyjira.kanban.utils.SprintStatus;
 import com.tinyjira.kanban.utils.TaskStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -55,6 +57,14 @@ public class TaskServiceImpl implements TaskService {
         
         Task taskToMove = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceAccessException("Task not found"));
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (taskToMove.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
+             throw new ResourceAccessException("Viewer cannot move tasks.");
+        }
         
         BoardColumn targetColumn = columnRepository.findById(targetColumnId)
                 .orElseThrow(() -> new ResourceAccessException("Column not found"));
@@ -106,6 +116,13 @@ public class TaskServiceImpl implements TaskService {
     
     @Override
     public TaskDetailResponse createTask(TaskRequest taskRequest, User creator) {
+        Board board = boardRepository.findById(taskRequest.getBoardId())
+                .orElseThrow(() -> new ResourceNotFoundException("Board not found!"));
+
+        if (board.getProject().getRole(creator) == ProjectRole.VIEWER) {
+            throw new ResourceAccessException("Viewer cannot create tasks.");
+        }
+
         Task task = toEntity(taskRequest);
         log.info("due date and assigneeId {}, {}", taskRequest.getDueDate(), taskRequest.getAssigneeId());
         Double maxPosition = taskRepository.findMaxPositionByBoardColumnId(taskRequest.getColumnId());
@@ -147,6 +164,10 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
         
+        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
+             throw new AccessDeniedException("Viewer cannot assign tasks.");
+        }
+
         if (!task.canBeAssignedBy(currentUser)) {
             throw new AccessDeniedException("Bạn không có quyền gán task này (Chỉ PM hoặc Creator)");
         }
@@ -185,6 +206,14 @@ public class TaskServiceImpl implements TaskService {
     public void estimateTask(Long taskId, Double hours) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
+             throw new ResourceAccessException("Viewer cannot estimate tasks.");
+        }
         
         Double oldEstimate = task.getEstimateHours();
         
@@ -215,6 +244,10 @@ public class TaskServiceImpl implements TaskService {
     public void updateTask(Long taskId, Map<String, Object> updates, User currentUser) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
+             throw new ResourceAccessException("Viewer cannot update tasks.");
+        }
 
         updates.forEach((key, value) -> {
             String oldValue = "";
@@ -348,9 +381,17 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Transactional
     public void deleteTask(Long taskId) {
-        if (!taskRepository.existsById(taskId)) {
-            throw new ResourceNotFoundException("Task not found");
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
+             throw new ResourceAccessException("Viewer cannot delete tasks.");
         }
+
         taskRepository.deleteById(taskId);
     }
 
@@ -359,6 +400,14 @@ public class TaskServiceImpl implements TaskService {
     public void moveTaskToSprint(Long taskId, Long sprintId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (task.getBoard().getProject().getRole(currentUser) == ProjectRole.VIEWER) {
+             throw new ResourceAccessException("Viewer cannot move tasks to sprint.");
+        }
 
         if (sprintId == null) {
             // Move to backlog

@@ -22,6 +22,7 @@ interface UserSummary {
     username: string;
     fullName: string;
     avatarUrl: string;
+    projectRole: string;
 }
 
 interface Notification {
@@ -169,6 +170,21 @@ const MenuHeader = () => {
         } catch (error: any) {
             console.error("Failed to transfer ownership", error);
             toast.error(error.response?.data?.message || "Failed to transfer ownership");
+        }
+    };
+
+    const handleChangeRole = async (userId: number, newRole: string) => {
+        try {
+            await axiosClient.patch(`/projects-member/change-role`, {
+                projectId: Number(projectId),
+                userId: userId,
+                role: newRole
+            });
+            toast.success("Role updated successfully");
+            fetchProjectMembers(); // Refresh list
+        } catch (error: any) {
+            console.error("Failed to change role", error);
+            toast.error(error.response?.data?.message || "Failed to change role");
         }
     };
 
@@ -382,9 +398,17 @@ const MenuHeader = () => {
                                                 <p className="text-xs text-gray-500">{member.username}</p>
                                             </div>
                                         </div>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 items-center">
                                             {isOwner && member.id !== projectOwnerId && (
                                                 <>
+                                                    <select
+                                                        value={member.projectRole || "member"}
+                                                        onChange={(e) => handleChangeRole(member.id, e.target.value)}
+                                                        className="text-xs border border-gray-300 rounded px-2 py-1 outline-none focus:border-blue-500"
+                                                    >
+                                                        <option value="member">Member</option>
+                                                        <option value="viewer">Viewer</option>
+                                                    </select>
                                                     <button
                                                         onClick={() => handleTransferOwnership(member.id)}
                                                         className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors"
@@ -400,6 +424,11 @@ const MenuHeader = () => {
                                                         <FaTrash size={14} />
                                                     </button>
                                                 </>
+                                            )}
+                                            {!isOwner && member.id !== projectOwnerId && (
+                                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                                    {member.projectRole || "MEMBER"}
+                                                </span>
                                             )}
                                         </div>
                                     </li>

@@ -3,6 +3,7 @@ package com.tinyjira.kanban.controller;
 import com.tinyjira.kanban.DTO.request.ProjectMemberRequest;
 import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.service.ProjectMemberService;
+import com.tinyjira.kanban.utils.ProjectRole;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,5 +54,19 @@ public class ProjectMemberController {
         Long newOwnerId = request.get("newOwnerId");
         projectMemberService.transferOwnership(projectId, newOwnerId, currentOwner);
         return ResponseEntity.ok("Ownership transferred successfully");
+    }
+
+    @PatchMapping("/change-role")
+    public ResponseEntity<?> changeMemberRole(
+            @RequestBody Map<String, Object> request,
+            @AuthenticationPrincipal User requester
+    ) {
+        Long projectId = Long.valueOf(request.get("projectId").toString());
+        Long userId = Long.valueOf(request.get("userId").toString());
+        String roleStr = request.get("role").toString();
+        ProjectRole newRole = ProjectRole.valueOf(roleStr.toUpperCase());
+
+        projectMemberService.changeMemberRole(projectId, userId, newRole, requester);
+        return ResponseEntity.ok("Member role changed successfully");
     }
 }

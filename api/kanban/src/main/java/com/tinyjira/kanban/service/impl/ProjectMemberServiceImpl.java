@@ -34,9 +34,9 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
         
-        // Allow both PM and MEMBER to invite
-        if (!project.hasMember(inviter) && !project.getOwner().getId().equals(inviter.getId())) {
-             throw new AccessDeniedException("You must be a member of the project to invite others!");
+        // Only PM can invite
+        if (project.getRole(inviter) != ProjectRole.PROJECT_MANAGER) {
+             throw new AccessDeniedException("You must be a Project Manager to invite others!");
         }
         
         User userToInvite = userRepository.findByEmail(email)
@@ -46,6 +46,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
             throw new IllegalArgumentException("User is already a member of this project!");
         }
         
+        // Default role is MEMBER when invited
         project.addMember(userToInvite, ProjectRole.MEMBER);
         
         projectRepository.save(project);
@@ -131,6 +132,29 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         // Set new owner
         project.setOwner(newOwner);
 
+        projectRepository.save(project);
+    }
+
+    @Override
+    @Transactional
+    public void changeMemberRole(Long projectId, Long userId, ProjectRole newRole, User requester) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        if (project.getRole(requester) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You don't have permission to change member role!");
+        }
+
+        if (project.getOwner().getId().equals(userId)) {
+             throw new IllegalArgumentException("Cannot change role of the project owner!");
+        }
+
+        ProjectMember member = project.getMembers().stream()
+                .filter(m -> m.getUser().getId().equals(userId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found in project"));
+
+        member.setProjectRole(newRole);
         projectRepository.save(project);
     }
 }

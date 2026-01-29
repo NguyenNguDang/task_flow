@@ -1,6 +1,7 @@
 package com.tinyjira.kanban.DTO.response;
 
 import com.tinyjira.kanban.model.User;
+import com.tinyjira.kanban.utils.ProjectRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,7 @@ public class UserSummaryResponse {
     private String username;
     private String fullName;
     private String avatarUrl;
+    private ProjectRole projectRole;
 
     public static UserSummaryResponse fromEntity(User user) {
         return UserSummaryResponse.builder()

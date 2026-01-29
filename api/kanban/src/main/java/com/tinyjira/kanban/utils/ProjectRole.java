@@ -6,5 +6,7 @@ public enum ProjectRole {
     @JsonProperty("project_manager")
     PROJECT_MANAGER,
     @JsonProperty("member")
-    MEMBER
+    MEMBER,
+    @JsonProperty("viewer")
+    VIEWER
 }

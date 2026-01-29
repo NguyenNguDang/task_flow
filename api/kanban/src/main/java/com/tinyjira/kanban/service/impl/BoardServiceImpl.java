@@ -8,13 +8,18 @@ import com.tinyjira.kanban.model.Board;
 import com.tinyjira.kanban.model.BoardColumn;
 import com.tinyjira.kanban.model.Project;
 import com.tinyjira.kanban.model.Task;
+import com.tinyjira.kanban.model.User;
 import com.tinyjira.kanban.repository.BoardColumnRepository;
 import com.tinyjira.kanban.repository.BoardRepository;
 import com.tinyjira.kanban.repository.ProjectRepository;
+import com.tinyjira.kanban.repository.UserRepository;
 import com.tinyjira.kanban.service.BoardService;
+import com.tinyjira.kanban.utils.ProjectRole;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -28,12 +33,21 @@ public class BoardServiceImpl implements BoardService {
     private final BoardRepository boardRepository;
     private final ProjectRepository projectRepository;
     private final BoardColumnRepository boardColumnRepository;
+    private final UserRepository userRepository;
     
     @Override
     @Transactional
     public BoardDTO createBoard(BoardRequest request){
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (project.getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to create board.");
+        }
         
         Board board = Board.builder()
                 .project(project)
@@ -122,6 +136,14 @@ public class BoardServiceImpl implements BoardService {
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
 
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (board.getProject().getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to update board.");
+        }
+
         board.setTitle(request.getTitle());
         board.setDescription(request.getDescription());
 
@@ -132,9 +154,17 @@ public class BoardServiceImpl implements BoardService {
     @Override
     @Transactional
     public void deleteBoard(Long id) {
-        if (!boardRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Board not found");
+        Board board = boardRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (board.getProject().getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to delete board.");
         }
+
         boardRepository.deleteById(id);
     }
     

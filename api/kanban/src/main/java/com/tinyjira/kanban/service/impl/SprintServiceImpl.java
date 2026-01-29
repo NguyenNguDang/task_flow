@@ -10,12 +10,16 @@ import com.tinyjira.kanban.repository.BoardRepository;
 import com.tinyjira.kanban.repository.SprintHistoryRepository;
 import com.tinyjira.kanban.repository.SprintRepository;
 import com.tinyjira.kanban.repository.TaskRepository;
+import com.tinyjira.kanban.repository.UserRepository;
 import com.tinyjira.kanban.service.SprintService;
 import com.tinyjira.kanban.service.strategy.MvpScoringStrategy;
+import com.tinyjira.kanban.utils.ProjectRole;
 import com.tinyjira.kanban.utils.SprintStatus;
 import com.tinyjira.kanban.utils.TaskStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -32,12 +36,21 @@ public class SprintServiceImpl implements SprintService {
     private final TaskRepository taskRepository;
     private final MvpScoringStrategy mvpScoringStrategy;
     private final SprintHistoryRepository sprintHistoryRepository;
+    private final UserRepository userRepository;
     
     
     @Override
     public SprintDTO createSprint(Long boardId) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (board.getProject().getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to create sprint.");
+        }
         
         String nextName = generateNextSprintName(boardId);
         
@@ -62,6 +75,14 @@ public class SprintServiceImpl implements SprintService {
     @Override
     public void updateSprint(Long id, SprintRequest sprintRequest) {
         Sprint sprint = getSprintById(id);
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (sprint.getBoard().getProject().getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to update sprint.");
+        }
         
         if (sprintRequest.getName() != null) {
             sprint.setName(sprintRequest.getName());
@@ -96,6 +117,14 @@ public class SprintServiceImpl implements SprintService {
     @Override
     public void completeSprint(Long sprintId, Long targetSprintId) {
         Sprint sprint = getSprintById(sprintId);
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (sprint.getBoard().getProject().getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to complete sprint.");
+        }
         
         // targetSprintId có thể null nếu người dùng chọn chuyển về Backlog
         Sprint targetSprint = null;
@@ -112,6 +141,15 @@ public class SprintServiceImpl implements SprintService {
     @Override
     public void startSprint(Long id) {
         Sprint sprint = getSprintById(id);
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (sprint.getBoard().getProject().getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to start sprint.");
+        }
+
         sprint.start();
         sprintRepository.save(sprint);
 
@@ -167,6 +205,15 @@ public class SprintServiceImpl implements SprintService {
     @Override
     public void deleteSprint(Long id) {
         Sprint sprint = getSprintById(id);
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (sprint.getBoard().getProject().getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
+            throw new AccessDeniedException("You do not have permission to delete sprint.");
+        }
+
         // Logic: Move tasks to backlog before deleting? Or delete tasks?
         // Usually, tasks should be moved to backlog.
         List<Task> tasks = taskRepository.findBySprintId(id);

@@ -46,6 +46,10 @@ public class BoardColumnServiceImpl implements BoardColumnService {
         User currentUser = userRepository.findByEmail(currentUserEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // Only PM and MEMBER can create columns (based on requirement: Member can add/edit/delete column?)
+        // Wait, requirement says: "Member: thao tác bình thường: trừ create/start/complete sprint, thêm user, thay đổi quyền user, thêm, sửa, xóa board, thêm sửa, xóa, column"
+        // So Member CANNOT add/edit/delete column. Only PM can.
+
         if (board.getProject().getRole(currentUser) != ProjectRole.PROJECT_MANAGER) {
             throw new AccessDeniedException("You do not have permission to create column.");
         }
